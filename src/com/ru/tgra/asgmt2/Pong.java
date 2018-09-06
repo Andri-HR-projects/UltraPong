@@ -1,0 +1,379 @@
+package com.ru.tgra.asgmt2;
+
+
+import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.GL20;
+
+import java.nio.FloatBuffer;
+
+import com.badlogic.gdx.utils.BufferUtils;
+
+public class Pong extends ApplicationAdapter {
+	
+	private FloatBuffer vertexBuffer;
+
+	private FloatBuffer modelMatrix;
+	private FloatBuffer projectionMatrix;
+
+	private int renderingProgramID;
+	private int vertexShaderID;
+	private int fragmentShaderID;
+
+	private int positionLoc;
+
+	private int modelMatrixLoc;
+	private int projectionMatrixLoc;
+
+	private int colorLoc;
+	
+	private float paddleSize;
+	private float paddleSpeed;
+	
+	private float normalPaddleX;
+	private float normalPaddleY;
+	private float normalEdgeX;
+	private float normalEdgeY;
+	
+	private float paddle1PositionX;
+	private float paddle1PositionY;
+	
+	private float paddle2PositionX;
+	private float paddle2PositionY;
+	
+	private float ballVectorX;
+	private float ballVectorY;
+	private float ballPositionX;
+	private float ballPositionY;
+	
+	private float paddleArray[];
+
+	@Override
+	public void create () {
+
+		String vertexShaderString;
+		String fragmentShaderString;
+
+		vertexShaderString = Gdx.files.internal("shaders/simple2D.vert").readString();
+		fragmentShaderString =  Gdx.files.internal("shaders/simple2D.frag").readString();
+
+		vertexShaderID = Gdx.gl.glCreateShader(GL20.GL_VERTEX_SHADER);
+		fragmentShaderID = Gdx.gl.glCreateShader(GL20.GL_FRAGMENT_SHADER);
+	
+		Gdx.gl.glShaderSource(vertexShaderID, vertexShaderString);
+		Gdx.gl.glShaderSource(fragmentShaderID, fragmentShaderString);
+	
+		Gdx.gl.glCompileShader(vertexShaderID);
+		Gdx.gl.glCompileShader(fragmentShaderID);
+
+		renderingProgramID = Gdx.gl.glCreateProgram();
+	
+		Gdx.gl.glAttachShader(renderingProgramID, vertexShaderID);
+		Gdx.gl.glAttachShader(renderingProgramID, fragmentShaderID);
+	
+		Gdx.gl.glLinkProgram(renderingProgramID);
+
+		positionLoc				= Gdx.gl.glGetAttribLocation(renderingProgramID, "a_position");
+		Gdx.gl.glEnableVertexAttribArray(positionLoc);
+
+		modelMatrixLoc			= Gdx.gl.glGetUniformLocation(renderingProgramID, "u_modelMatrix");
+		projectionMatrixLoc	= Gdx.gl.glGetUniformLocation(renderingProgramID, "u_projectionMatrix");
+
+		colorLoc				= Gdx.gl.glGetUniformLocation(renderingProgramID, "u_color");
+
+		Gdx.gl.glUseProgram(renderingProgramID);
+
+		float[] pm = new float[16];
+
+		pm[0] = 2.0f / Gdx.graphics.getWidth(); pm[4] = 0.0f; pm[8] = 0.0f; pm[12] = -1.0f;
+		pm[1] = 0.0f; pm[5] = 2.0f / Gdx.graphics.getHeight(); pm[9] = 0.0f; pm[13] = -1.0f;
+		pm[2] = 0.0f; pm[6] = 0.0f; pm[10] = 1.0f; pm[14] = 0.0f;
+		pm[3] = 0.0f; pm[7] = 0.0f; pm[11] = 0.0f; pm[15] = 1.0f;
+
+		projectionMatrix = BufferUtils.newFloatBuffer(16);
+		projectionMatrix.put(pm);
+		projectionMatrix.rewind();
+		Gdx.gl.glUniformMatrix4fv(projectionMatrixLoc, 1, false, projectionMatrix);
+
+
+		float[] mm = new float[16];
+
+		mm[0] = 1.0f; mm[4] = 0.0f; mm[8] = 0.0f; mm[12] = 0.0f;
+		mm[1] = 0.0f; mm[5] = 1.0f; mm[9] = 0.0f; mm[13] = 0.0f;
+		mm[2] = 0.0f; mm[6] = 0.0f; mm[10] = 1.0f; mm[14] = 0.0f;
+		mm[3] = 0.0f; mm[7] = 0.0f; mm[11] = 0.0f; mm[15] = 1.0f;
+
+		modelMatrix = BufferUtils.newFloatBuffer(16);
+		modelMatrix.put(mm);
+		modelMatrix.rewind();
+
+		Gdx.gl.glUniformMatrix4fv(modelMatrixLoc, 1, false, modelMatrix);
+
+		//COLOR IS SET HERE
+		Gdx.gl.glUniform4f(colorLoc, 0.7f, 0.2f, 0, 1);
+
+		paddleSize = 100.0f;
+		paddleSpeed = 4.0f;
+		
+		normalPaddleX = 1;
+		normalPaddleY = 0;
+		
+		normalEdgeX = 0;
+		normalEdgeY = 1;
+
+		//VERTEX ARRAY IS FILLED HERE
+		float[] array = {-50.0f, -50.0f,
+						-50.0f, 50.0f,
+						50.0f, -50.0f,
+						50.0f, 50.0f};
+
+		vertexBuffer = BufferUtils.newFloatBuffer(8);
+		vertexBuffer.put(array);
+		vertexBuffer.rewind();
+		
+		paddle1PositionX = 10.0f;
+		paddle1PositionY = 200.0f;
+		
+		paddle2PositionX = Gdx.graphics.getWidth() - 10;
+		paddle2PositionY = 200.0f;
+		
+		ballVectorX = -2;
+		ballVectorY = -1;
+		ballPositionX = 75.0f;
+		ballPositionY = 200.0f;
+		
+		float[] tmp = {-35.0f, -100.0f,
+					   -35.0f,  100.0f,
+						35.0f, -100.0f,
+						35.0f,  100.0f};
+		paddleArray = tmp;
+		
+	}
+	
+	private float getTHit(float BX, float BY, float normalX, float normalY) {
+		return (normalX*(BX-ballPositionX)+normalY*(BY-ballPositionY))/(normalX*ballVectorX + normalY*ballVectorY);
+		
+	}
+	
+	private float getPHitX(float THit) {
+		System.out.println(ballPositionX + ballVectorX*THit);
+		return ballPositionX + ballVectorX*THit;
+		
+	}
+	
+	private float getPHitY(float THit) {
+		System.out.println(ballPositionY + ballVectorY*THit);
+		return ballPositionY + ballVectorY*THit;
+		
+	}
+	
+	private void getNewVector(float normalPaddleX, float normalPaddleY) {
+		float denominator = (float) Math.sqrt(normalPaddleX*normalPaddleX + normalPaddleY*normalPaddleY);
+		float a = 2*(ballVectorX*(normalPaddleX/denominator)+ballVectorY*(normalPaddleY/denominator));
+		//X axis
+		ballVectorX = ballVectorX - (a*(normalPaddleX/denominator));
+		System.out.println("ball_vector_X :" + ballVectorX);
+
+		//Y axis
+		ballVectorY = ballVectorY - (a*(normalPaddleY/denominator));
+		System.out.println("ball_vector_Y :" + ballVectorY);
+		
+		if(ballVectorX < 0) {
+			normalPaddleX = 1;
+		}else {
+			normalPaddleX = -1;
+		}
+		if(ballVectorY < 0) {
+			normalPaddleX = -1;
+		}else {
+			normalPaddleX = 1;
+		}
+
+	}
+	
+	private void paddleReflection(float paddleX, float paddleY, int arrayX, int arrayY) {
+		if(0 <= getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY) && getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY) < 3) {
+			if (ballPositionX == getPHitX(getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY))) {
+				if (ballPositionY == getPHitY(getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY], normalPaddleX, normalPaddleY))) {
+					if( ( ballPositionY < (paddleY + paddleArray[3]) ) && ( ballPositionY > (paddleY + paddleArray[arrayY]) ) ) {
+						System.out.print("Padde-bounch :");
+						getNewVector(normalPaddleX, normalPaddleY);
+					}
+				}
+			}
+		}
+	}
+	
+	private void edgeReflection(float BX, float BY) {
+		System.out.println(getTHit(BX, BY, normalEdgeX, normalEdgeY));
+		if(0 <= getTHit(BX, BY, normalEdgeX, normalEdgeY) && getTHit(BX, BY, normalEdgeX, normalEdgeY) < 3) {
+			if (ballPositionY == getPHitY(getTHit(BX, BY, normalEdgeX, normalEdgeY))) {
+				System.out.print("Edge-bounch :");
+				getNewVector(normalEdgeX, normalEdgeY);
+			}
+			
+		}
+	}
+
+
+
+	
+	private void update()
+	{
+		if(Gdx.input.justTouched())
+		{ 
+
+		}
+		
+		if (ballVectorX < 0) {
+			paddleReflection(paddle1PositionX, paddle1PositionY, 4, 5);
+		} else {
+			paddleReflection(paddle2PositionX, paddle2PositionY, 0, 1);
+		}
+		if (ballVectorY < 0) {
+			edgeReflection(0, 5);
+		} else {
+			edgeReflection(0, Gdx.graphics.getHeight()-5);
+			
+		}
+		
+		
+
+		
+		ballPositionX += ballVectorX; 
+		ballPositionY += ballVectorY;
+		
+		//Paddle1 Movement
+		if(Gdx.input.isKeyPressed(Input.Keys.W)) {
+			if (paddle1PositionY+paddleSize >= Gdx.graphics.getHeight()) {
+				System.out.print("Top1 :");
+				System.out.println(paddle1PositionX+paddleSize);
+			} else {
+				paddle1PositionY += paddleSpeed;
+			}
+		}
+		if(Gdx.input.isKeyPressed(Input.Keys.S)) {
+			if (paddle1PositionY-paddleSize <= 0) {
+				System.out.print("Bottom1: ");
+				System.out.println(paddle1PositionX-paddleSize);
+			} else {
+				paddle1PositionY -= paddleSpeed;
+			}
+		}
+
+		//Paddle2 Movement
+		if(Gdx.input.isKeyPressed(Input.Keys.UP)) {
+			if (paddle2PositionY+paddleSize >= Gdx.graphics.getHeight()) {
+				System.out.print("Top2: ");
+				System.out.println(paddle2PositionY+paddleSize);
+			} else {
+				paddle2PositionY += paddleSpeed;
+			}
+		}
+		if(Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+			if (paddle2PositionY-paddleSize <= 0) {
+				System.out.print("Bottom2: ");
+				System.out.println(paddle2PositionY-paddleSize);
+			} else {
+				paddle2PositionY -= paddleSpeed;
+			}
+		}
+		
+		//do all updates to the game
+	}
+	
+	private void drawBackround() {
+		Gdx.gl.glClearColor(0.0f, 0.0f, 0, 1.0f);
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+	}
+	private void drawPaddle(float x, float y) {
+		clearModelMatrix();
+		setModelMatrixScale(0.5f, 2.0f);
+		setModelMatrixTranslation(x, y);	
+		Gdx.gl.glUniform4f(colorLoc, 1.0f, 1.0f, 1, 1);
+		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+	}
+	private void drawBall(float x, float y) {
+		clearModelMatrix();
+		setModelMatrixScale(0.2f, 0.2f);
+		setModelMatrixTranslation(x, y);
+		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+		Gdx.gl.glUniform4f(colorLoc, 1.0f, 1.0f, 1, 1);
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+
+	}
+	
+	private void drawMiddle(float x, float y) {
+		clearModelMatrix();
+		setModelMatrixScale(0.2f, 0.5f);
+		setModelMatrixTranslation(x, y);
+		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.8f, 0.8f, 1);
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+	}
+
+	private void display()
+	{
+		//do all actual drawing and rendering here
+		drawBackround();
+		
+		for(int i = 0; i < Gdx.graphics.getHeight(); i+=Gdx.graphics.getHeight()/9) {
+			drawMiddle(Gdx.graphics.getWidth()/2, i);
+		}
+		
+		drawPaddle (paddle1PositionX, paddle1PositionY);
+		drawPaddle (paddle2PositionX, paddle2PositionY);
+		
+		drawBall(ballPositionX, ballPositionY);
+		
+
+		
+	}
+
+	@Override
+	public void render () {
+		
+		//put the code inside the update and display methods, depending on the nature of the code
+		update();
+		display();
+
+	}
+
+	private void clearModelMatrix()
+	{
+		modelMatrix.put(0, 1.0f);
+		modelMatrix.put(1, 0.0f);
+		modelMatrix.put(2, 0.0f);
+		modelMatrix.put(3, 0.0f);
+		modelMatrix.put(4, 0.0f);
+		modelMatrix.put(5, 1.0f);
+		modelMatrix.put(6, 0.0f);
+		modelMatrix.put(7, 0.0f);
+		modelMatrix.put(8, 0.0f);
+		modelMatrix.put(9, 0.0f);
+		modelMatrix.put(10, 1.0f);
+		modelMatrix.put(11, 0.0f);
+		modelMatrix.put(12, 0.0f);
+		modelMatrix.put(13, 0.0f);
+		modelMatrix.put(14, 0.0f);
+		modelMatrix.put(15, 1.0f);
+
+		Gdx.gl.glUniformMatrix4fv(modelMatrixLoc, 1, false, modelMatrix);
+	}
+	private void setModelMatrixTranslation(float xTranslate, float yTranslate)
+	{
+		modelMatrix.put(12, xTranslate);
+		modelMatrix.put(13, yTranslate);
+
+		Gdx.gl.glUniformMatrix4fv(modelMatrixLoc, 1, false, modelMatrix);
+	}
+	private void setModelMatrixScale(float xScale, float yScale)
+	{
+		modelMatrix.put(0, xScale);
+		modelMatrix.put(5, yScale);
+
+		Gdx.gl.glUniformMatrix4fv(modelMatrixLoc, 1, false, modelMatrix);
+	}
+}
