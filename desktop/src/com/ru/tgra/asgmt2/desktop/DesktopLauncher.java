@@ -13,7 +13,5 @@ public class DesktopLauncher {
 		config.height = 768;  //the window size
 
 		new LwjglApplication(new Pong(), config);
-		//new LwjglApplication(new HLUTI2(), config);
-		//new LwjglApplication(new HLUTI3(), config);
 	}
 }

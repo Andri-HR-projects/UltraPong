@@ -138,9 +138,9 @@ public class Pong extends ApplicationAdapter {
 		paddle2PositionX = Gdx.graphics.getWidth() - 10;
 		paddle2PositionY = 200.0f;
 		
-		ballVectorX = -2;
-		ballVectorY = -1;
-		ballPositionX = 75.0f;
+		ballVectorX = 0;
+		ballVectorY = 0;
+		ballPositionX = 200.0f;
 		ballPositionY = 200.0f;
 		
 		float[] tmp = {-35.0f, -100.0f,
@@ -157,13 +157,11 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private float getPHitX(float THit) {
-		System.out.println(ballPositionX + ballVectorX*THit);
 		return ballPositionX + ballVectorX*THit;
 		
 	}
 	
 	private float getPHitY(float THit) {
-		System.out.println(ballPositionY + ballVectorY*THit);
 		return ballPositionY + ballVectorY*THit;
 		
 	}
@@ -172,12 +170,12 @@ public class Pong extends ApplicationAdapter {
 		float denominator = (float) Math.sqrt(normalPaddleX*normalPaddleX + normalPaddleY*normalPaddleY);
 		float a = 2*(ballVectorX*(normalPaddleX/denominator)+ballVectorY*(normalPaddleY/denominator));
 		//X axis
-		ballVectorX = ballVectorX - (a*(normalPaddleX/denominator));
-		System.out.println("ball_vector_X :" + ballVectorX);
+		ballVectorX = 1.02f*(ballVectorX - (a*(normalPaddleX/denominator)));
+		//System.out.println("ball_vector_X :" + ballVectorX);
 
 		//Y axis
-		ballVectorY = ballVectorY - (a*(normalPaddleY/denominator));
-		System.out.println("ball_vector_Y :" + ballVectorY);
+		ballVectorY = 1.02f*(ballVectorY - (a*(normalPaddleY/denominator)));
+		//System.out.println("ball_vector_Y :" + ballVectorY);
 		
 		if(ballVectorX < 0) {
 			normalPaddleX = 1;
@@ -193,30 +191,18 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private void paddleReflection(float paddleX, float paddleY, int arrayX, int arrayY) {
-		if(0 <= getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY) && getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY) < 3) {
-			if (ballPositionX == getPHitX(getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY))) {
-				if (ballPositionY == getPHitY(getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY], normalPaddleX, normalPaddleY))) {
-					if( ( ballPositionY < (paddleY + paddleArray[3]) ) && ( ballPositionY > (paddleY + paddleArray[arrayY]) ) ) {
-						System.out.print("Padde-bounch :");
-						getNewVector(normalPaddleX, normalPaddleY);
-					}
-				}
+		if(1 > getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY)) {
+			if( ( ballPositionY < (paddleY + paddleArray[3]) ) && ( ballPositionY > (paddleY + paddleArray[arrayY]) ) ) {
+				getNewVector(normalPaddleX, normalPaddleY);
 			}
 		}
 	}
 	
-	private void edgeReflection(float BX, float BY) {
-		System.out.println(getTHit(BX, BY, normalEdgeX, normalEdgeY));
-		if(0 <= getTHit(BX, BY, normalEdgeX, normalEdgeY) && getTHit(BX, BY, normalEdgeX, normalEdgeY) < 3) {
-			if (ballPositionY == getPHitY(getTHit(BX, BY, normalEdgeX, normalEdgeY))) {
-				System.out.print("Edge-bounch :");
-				getNewVector(normalEdgeX, normalEdgeY);
-			}
-			
+	private void edgeReflection(float BX, float BY, boolean top) {
+		if(1 > getTHit(BX, BY, normalEdgeX, normalEdgeY)) {
+			getNewVector(normalEdgeX, normalEdgeY);
 		}
 	}
-
-
 
 	
 	private void update()
@@ -232,14 +218,22 @@ public class Pong extends ApplicationAdapter {
 			paddleReflection(paddle2PositionX, paddle2PositionY, 0, 1);
 		}
 		if (ballVectorY < 0) {
-			edgeReflection(0, 5);
+			edgeReflection(0, 5, false);
 		} else {
-			edgeReflection(0, Gdx.graphics.getHeight()-5);
+			edgeReflection(0, Gdx.graphics.getHeight()-5, true);
 			
 		}
-		
-		
-
+		if (ballPositionX <= 0) {
+			ballPositionX = 200.0f;
+			ballPositionY = 200.0f;
+			ballVectorX = 0;
+			ballVectorY = 0;
+		}else if (ballPositionX >= Gdx.graphics.getWidth()) {
+			ballPositionX = 200.0f;
+			ballPositionY = 200.0f;
+			ballVectorX = 0;
+			ballVectorY = 0;
+		}
 		
 		ballPositionX += ballVectorX; 
 		ballPositionY += ballVectorY;
@@ -247,34 +241,46 @@ public class Pong extends ApplicationAdapter {
 		//Paddle1 Movement
 		if(Gdx.input.isKeyPressed(Input.Keys.W)) {
 			if (paddle1PositionY+paddleSize >= Gdx.graphics.getHeight()) {
-				System.out.print("Top1 :");
-				System.out.println(paddle1PositionX+paddleSize);
+				//System.out.print("Top1 :");
+				//System.out.println(paddle1PositionX+paddleSize);
 			} else {
 				paddle1PositionY += paddleSpeed;
 			}
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.S)) {
 			if (paddle1PositionY-paddleSize <= 0) {
-				System.out.print("Bottom1: ");
-				System.out.println(paddle1PositionX-paddleSize);
+				//System.out.print("Bottom1: ");
+				//System.out.println(paddle1PositionX-paddleSize);
 			} else {
 				paddle1PositionY -= paddleSpeed;
+			}
+		}
+		if(Gdx.input.isKeyPressed(Input.Keys.D)) {
+			if (ballVectorX == 0 && 0 == ballVectorY) {
+				ballVectorX = -3;
+				ballVectorY = 4;
+			}
+		}
+		if(Gdx.input.isKeyPressed(Input.Keys.A)) {
+			if (ballVectorX == 0 && 0 == ballVectorY) {
+				ballVectorX = -3;
+				ballVectorY = -3;
 			}
 		}
 
 		//Paddle2 Movement
 		if(Gdx.input.isKeyPressed(Input.Keys.UP)) {
 			if (paddle2PositionY+paddleSize >= Gdx.graphics.getHeight()) {
-				System.out.print("Top2: ");
-				System.out.println(paddle2PositionY+paddleSize);
+				//System.out.print("Top2: ");
+				//System.out.println(paddle2PositionY+paddleSize);
 			} else {
 				paddle2PositionY += paddleSpeed;
 			}
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
 			if (paddle2PositionY-paddleSize <= 0) {
-				System.out.print("Bottom2: ");
-				System.out.println(paddle2PositionY-paddleSize);
+				//System.out.print("Bottom2: ");
+				//System.out.println(paddle2PositionY-paddleSize);
 			} else {
 				paddle2PositionY -= paddleSpeed;
 			}
@@ -301,7 +307,7 @@ public class Pong extends ApplicationAdapter {
 		setModelMatrixTranslation(x, y);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 		Gdx.gl.glUniform4f(colorLoc, 1.0f, 1.0f, 1, 1);
-		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_FAN, 0, 4);
 
 	}
 	
@@ -328,7 +334,6 @@ public class Pong extends ApplicationAdapter {
 		
 		drawBall(ballPositionX, ballPositionY);
 		
-
 		
 	}
 
