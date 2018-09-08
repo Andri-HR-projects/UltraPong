@@ -153,29 +153,23 @@ public class Pong extends ApplicationAdapter {
 	
 	private float getTHit(float BX, float BY, float normalX, float normalY) {
 		return (normalX*(BX-ballPositionX)+normalY*(BY-ballPositionY))/(normalX*ballVectorX + normalY*ballVectorY);
-		
 	}
 	
 	private float getPHitX(float THit) {
 		return ballPositionX + ballVectorX*THit;
-		
 	}
 	
 	private float getPHitY(float THit) {
 		return ballPositionY + ballVectorY*THit;
-		
 	}
 	
 	private void getNewVector(float normalPaddleX, float normalPaddleY) {
 		float denominator = (float) Math.sqrt(normalPaddleX*normalPaddleX + normalPaddleY*normalPaddleY);
 		float a = 2*(ballVectorX*(normalPaddleX/denominator)+ballVectorY*(normalPaddleY/denominator));
 		//X axis
-		ballVectorX = 1.02f*(ballVectorX - (a*(normalPaddleX/denominator)));
-		//System.out.println("ball_vector_X :" + ballVectorX);
-
+		ballVectorX = 1.01f*(ballVectorX - (a*(normalPaddleX/denominator)));
 		//Y axis
-		ballVectorY = 1.02f*(ballVectorY - (a*(normalPaddleY/denominator)));
-		//System.out.println("ball_vector_Y :" + ballVectorY);
+		ballVectorY = 1.01f*(ballVectorY - (a*(normalPaddleY/denominator)));
 		
 		if(ballVectorX < 0) {
 			normalPaddleX = 1;
@@ -187,20 +181,25 @@ public class Pong extends ApplicationAdapter {
 		}else {
 			normalPaddleX = 1;
 		}
-
 	}
 	
 	private void paddleReflection(float paddleX, float paddleY, int arrayX, int arrayY) {
-		if(1 > getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY)) {
+		float THit = getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY);
+		if(1 > THit) {
 			if( ( ballPositionY < (paddleY + paddleArray[3]) ) && ( ballPositionY > (paddleY + paddleArray[arrayY]) ) ) {
 				getNewVector(normalPaddleX, normalPaddleY);
+				ballPositionX = ballVectorX * THit + getPHitX(THit);
+				ballPositionY = ballVectorY * THit + getPHitY(THit);
 			}
 		}
 	}
 	
 	private void edgeReflection(float BX, float BY, boolean top) {
-		if(1 > getTHit(BX, BY, normalEdgeX, normalEdgeY)) {
+		float THit = getTHit(BX, BY, normalEdgeX, normalEdgeY);
+		if(1 > THit) {
 			getNewVector(normalEdgeX, normalEdgeY);
+			ballPositionX = ballVectorX * THit + getPHitX(THit);
+			ballPositionY = ballVectorY * THit + getPHitY(THit);
 		}
 	}
 
@@ -240,25 +239,19 @@ public class Pong extends ApplicationAdapter {
 		
 		//Paddle1 Movement
 		if(Gdx.input.isKeyPressed(Input.Keys.W)) {
-			if (paddle1PositionY+paddleSize >= Gdx.graphics.getHeight()) {
-				//System.out.print("Top1 :");
-				//System.out.println(paddle1PositionX+paddleSize);
-			} else {
+			if (paddle1PositionY+paddleSize < Gdx.graphics.getHeight()) {
 				paddle1PositionY += paddleSpeed;
-			}
+			} 
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.S)) {
-			if (paddle1PositionY-paddleSize <= 0) {
-				//System.out.print("Bottom1: ");
-				//System.out.println(paddle1PositionX-paddleSize);
-			} else {
+			if (paddle1PositionY-paddleSize > 0) {
 				paddle1PositionY -= paddleSpeed;
 			}
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.D)) {
 			if (ballVectorX == 0 && 0 == ballVectorY) {
 				ballVectorX = -3;
-				ballVectorY = 4;
+				ballVectorY = 3;
 			}
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.A)) {
@@ -270,18 +263,12 @@ public class Pong extends ApplicationAdapter {
 
 		//Paddle2 Movement
 		if(Gdx.input.isKeyPressed(Input.Keys.UP)) {
-			if (paddle2PositionY+paddleSize >= Gdx.graphics.getHeight()) {
-				//System.out.print("Top2: ");
-				//System.out.println(paddle2PositionY+paddleSize);
-			} else {
+			if (paddle2PositionY+paddleSize < Gdx.graphics.getHeight()) {
 				paddle2PositionY += paddleSpeed;
 			}
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-			if (paddle2PositionY-paddleSize <= 0) {
-				//System.out.print("Bottom2: ");
-				//System.out.println(paddle2PositionY-paddleSize);
-			} else {
+			if (paddle2PositionY-paddleSize > 0) {
 				paddle2PositionY -= paddleSpeed;
 			}
 		}
@@ -307,8 +294,7 @@ public class Pong extends ApplicationAdapter {
 		setModelMatrixTranslation(x, y);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 		Gdx.gl.glUniform4f(colorLoc, 1.0f, 1.0f, 1, 1);
-		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_FAN, 0, 4);
-
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
 	}
 	
 	private void drawMiddle(float x, float y) {
