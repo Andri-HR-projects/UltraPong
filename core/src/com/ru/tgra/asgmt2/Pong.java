@@ -1,6 +1,5 @@
 package com.ru.tgra.asgmt2;
 
-
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -48,6 +47,8 @@ public class Pong extends ApplicationAdapter {
 	private float ballPositionY;
 	
 	private float paddleArray[];
+	
+	private float blocksArray[][];
 
 	@Override
 	public void create () {
@@ -149,6 +150,16 @@ public class Pong extends ApplicationAdapter {
 						35.0f,  100.0f};
 		paddleArray = tmp;
 		
+		int row = 9;
+		int col = 20;
+		
+		blocksArray = new float[row][col];
+		for(int i = 0; i < blocksArray.length; i++) {
+			for(int j = 5; j+5 < blocksArray[0].length; j++) {
+				blocksArray[i][j] = 1;
+			}
+		}
+		
 	}
 	
 	private float getTHit(float BX, float BY, float normalX, float normalY) {
@@ -167,9 +178,9 @@ public class Pong extends ApplicationAdapter {
 		float denominator = (float) Math.sqrt(normalPaddleX*normalPaddleX + normalPaddleY*normalPaddleY);
 		float a = 2*(ballVectorX*(normalPaddleX/denominator)+ballVectorY*(normalPaddleY/denominator));
 		//X axis
-		ballVectorX = 1.01f*(ballVectorX - (a*(normalPaddleX/denominator)));
+		ballVectorX = 1.0f*(ballVectorX - (a*(normalPaddleX/denominator)));
 		//Y axis
-		ballVectorY = 1.01f*(ballVectorY - (a*(normalPaddleY/denominator)));
+		ballVectorY = 1.0f*(ballVectorY - (a*(normalPaddleY/denominator)));
 		
 		if(ballVectorX < 0) {
 			normalPaddleX = 1;
@@ -183,11 +194,27 @@ public class Pong extends ApplicationAdapter {
 		}
 	}
 	
+	private void getNewPaddleVector(float paddleY) {
+		//Can be a constant but have it here if i want the game to speed up
+		float totalVectorLenght = (float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX);
+
+		if(ballPositionY-paddleY > 0) {
+			ballVectorY = ((ballPositionY-paddleY)/100)*4;
+		} else {
+			ballVectorY = ((ballPositionY-paddleY)/100)*4;
+		}		
+		if(ballVectorX > 0) {
+			ballVectorX = (float) -Math.sqrt(totalVectorLenght*totalVectorLenght-ballVectorY*ballVectorY);
+		} else {
+			ballVectorX = (float) Math.sqrt(totalVectorLenght*totalVectorLenght-ballVectorY*ballVectorY);
+		}
+	}
+	
 	private void paddleReflection(float paddleX, float paddleY, int arrayX, int arrayY) {
 		float THit = getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY);
 		if(1 > THit) {
 			if( ( ballPositionY < (paddleY + paddleArray[3]) ) && ( ballPositionY > (paddleY + paddleArray[arrayY]) ) ) {
-				getNewVector(normalPaddleX, normalPaddleY);
+				getNewPaddleVector(paddleY);
 				ballPositionX = ballVectorX * THit + getPHitX(THit);
 				ballPositionY = ballVectorY * THit + getPHitY(THit);
 			}
@@ -302,14 +329,34 @@ public class Pong extends ApplicationAdapter {
 		setModelMatrixScale(0.2f, 0.5f);
 		setModelMatrixTranslation(x, y);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
-		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.8f, 0.8f, 1);
+		Gdx.gl.glUniform4f(colorLoc, 0.2f, 0.2f, 0.2f, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+	}
+	
+	private void drawBlock(float x, float y) {
+		clearModelMatrix();
+		setModelMatrixScale(0.3f, 0.6f);
+		setModelMatrixTranslation(x, y);
+		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+		Gdx.gl.glUniform4f(colorLoc, 0.5f, 0.5f, 0.2f, 1);
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+	}
+	
+	private void drawBlocks(int level) {
+		for(int i = 0; i < blocksArray.length; i++) {
+			for(int j = 0; j < blocksArray[0].length; j++) {
+				if(blocksArray[i][j] > 0) {
+					drawBlock(j*40+132, i*80+60);
+				}
+			}
+		}
 	}
 
 	private void display()
 	{
 		//do all actual drawing and rendering here
 		drawBackround();
+		//drawBlocks(1);
 		
 		for(int i = 0; i < Gdx.graphics.getHeight(); i+=Gdx.graphics.getHeight()/9) {
 			drawMiddle(Gdx.graphics.getWidth()/2, i);
