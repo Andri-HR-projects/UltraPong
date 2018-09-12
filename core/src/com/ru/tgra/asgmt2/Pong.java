@@ -135,7 +135,7 @@ public class Pong extends ApplicationAdapter {
 		vertexBuffer.rewind();
 		
 		paddle1PositionX = 10.0f;
-		paddle1PositionY = 200.0f;
+		paddle1PositionY = 330.0f;
 		
 		paddle2PositionX = Gdx.graphics.getWidth() - 10;
 		paddle2PositionY = 200.0f;
@@ -241,31 +241,34 @@ public class Pong extends ApplicationAdapter {
 						if(ballVectorY > 0) {
 							//Going up to the right
 							
-							//check top right
-							float topRight = getTHit((float)(i*80)+60+(blockWidth/2), (float)(j*40)+132+(blockHeight/2), -1.0f, 0.0f, 50, 50);
-							//check top left
-							float topLeft = getTHit((float)(i*80)+60-(blockWidth/2), (float)(j*40)+132+(blockHeight/2), -1.0f, 0.0f, 50, 50);
-							//check bottom right
-							float bottomRight = getTHit((float)(i*80)+60+(blockWidth/2), (float)(j*40)+132-(blockHeight/2), -1.0f, 0.0f, 50, 50);
+							//check top right corner
+							float topRight = getTHit((float)(i*80)+60-(blockWidth/2), (float)(j*40)+132, -1.0f, 0.0f, 50, 50);
+							//check top left corner
+							float topLeft = getTHit((float)(i*80)+60+(blockWidth/2), (float)(j*40)+132+(blockHeight/2), 0.0f, -1.0f, -50, 50);
+							//check bottom right corner
+							float bottomRight = getTHit((float)(i*80)+60-(blockWidth/2), (float)(j*40)+132, -1.0f, 0.0f, 50, -50);
 							
+							//checking witch corner is going to hit first
 							if(topRight < topLeft) {
 								if(topRight < bottomRight) {
 									//topRight
-									if(topRight < 1 && topRight < 0) {
+									if(topRight < 1 && topRight > 0) { //is it going to hit in the next frame
 										System.out.println("TopRight");
-										if( ballPositionY+50 < i*80+60+blockHeight/2 && ballPositionY+50 > i*80+60-blockHeight/2) {
-											if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) {
+										if( ballPositionY+50 < i*80+60+blockHeight/2 && ballPositionY+50 > i*80+60-blockHeight/2) { //is it going to hit the object
+											if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) { //is the ball moving
 												blocksArray[i][j] = 0;
 												getNewVector(-1.0f,0.0f);
 												//ballVectorX = -ballVectorX;
 											}
 										}
 									}	
-								}else {
+								} else {
 									//bottomRight	
-									if(bottomRight < 1 && bottomRight < 0) {
-										System.out.println("BottomRight");
-										if( ballPositionY-50 < i*80+60+blockHeight/2 && ballPositionY-50 > i*80+60-blockHeight/2) {
+									if(bottomRight < 1 && bottomRight > 0) {
+										System.out.println("BottomRight: " + i + "," + j + "   " + bottomRight);
+
+										if( ballPositionY+50 < (i*80)+60+(blockHeight/2) && ballPositionY+50 > (i*80)+60-(blockHeight/2)) {
+											System.out.println("hit");
 											if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) {
 												blocksArray[i][j] = 0;
 												getNewVector(-1.0f,0.0f);
@@ -277,19 +280,20 @@ public class Pong extends ApplicationAdapter {
 							}else{
 								if(topLeft < bottomRight) {
 									//topLeft	
-									if(topLeft < 1 && topLeft < 0) {
+									if(topLeft < 1 && topLeft > 0) {
 										System.out.println("TopLeft");
-										if( ballPositionX+50 < j*40-132+blockHeight/2 && ballPositionX+50 > j*40-132-blockHeight/2) {
+										if( ballPositionX+50 < i*80+60+blockHeight/2 && ballPositionX+50 > i*80+60+blockHeight/2) {
+											System.out.println("TopLeft - hit");
 											if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) {
 												blocksArray[i][j] = 0;
-												getNewVector(-1.0f,0.0f);
+												getNewVector(0.0f,-1.0f);
 												//ballVectorX = -ballVectorX;
 											}
 										}	
 									}	
 								} else {
 									//bottomRight
-									if(bottomRight < 1 && bottomRight < 0) {
+									if(bottomRight < 1 && bottomRight > 0) {
 										float temp = ballPositionY-50;
 										float temp1 = i*80+60+blockHeight/2;
 										float temp2 = i*80+60-blockHeight/2;
