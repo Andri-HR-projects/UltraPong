@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
 
+import java.io.Console;
 import java.nio.FloatBuffer;
 
 import com.badlogic.gdx.utils.BufferUtils;
@@ -162,7 +163,7 @@ public class Pong extends ApplicationAdapter {
 		
 	}
 	
-	private float getTHit(float BX, float BY, float normalX, float normalY) {
+	private float getTHit(float BX, float BY, float normalX, float normalY, float ballX, float ballY) {
 		return (normalX*(BX-ballPositionX)+normalY*(BY-ballPositionY))/(normalX*ballVectorX + normalY*ballVectorY);
 	}
 	
@@ -196,7 +197,7 @@ public class Pong extends ApplicationAdapter {
 	
 	private void getNewPaddleVector(float paddleY) {
 		//Can be a constant but have it here if i want the game to speed up
-		float totalVectorLenght = (float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX);
+		float totalVectorLenght = 3;//(float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX);
 
 		if(ballPositionY-paddleY > 0) {
 			ballVectorY = ((ballPositionY-paddleY)/100)*4;
@@ -210,8 +211,8 @@ public class Pong extends ApplicationAdapter {
 		}
 	}
 	
-	private void paddleReflection(float paddleX, float paddleY, int arrayX, int arrayY) {
-		float THit = getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY);
+	private void paddleReflection(float paddleX, float paddleY, int arrayX, int arrayY, float ballX, float ballY) {
+		float THit = getTHit(paddleX + paddleArray[arrayX], paddleY + paddleArray[arrayY],normalPaddleX, normalPaddleY, ballX, ballY);
 		if(1 > THit) {
 			if( ( ballPositionY < (paddleY + paddleArray[3]) ) && ( ballPositionY > (paddleY + paddleArray[arrayY]) ) ) {
 				getNewPaddleVector(paddleY);
@@ -221,12 +222,147 @@ public class Pong extends ApplicationAdapter {
 		}
 	}
 	
-	private void edgeReflection(float BX, float BY, boolean top) {
-		float THit = getTHit(BX, BY, normalEdgeX, normalEdgeY);
+	private void edgeReflection(float BX, float BY, boolean top, float ballX, float ballY) {
+		float THit = getTHit(BX, BY, normalEdgeX, normalEdgeY, ballX, ballY);
 		if(1 > THit) {
 			getNewVector(normalEdgeX, normalEdgeY);
 			ballPositionX = ballVectorX * THit + getPHitX(THit);
 			ballPositionY = ballVectorY * THit + getPHitY(THit);
+		}
+	}
+	
+	private void blockReflection() {
+		for(int i = 0; i < blocksArray.length; i++) {
+			for(int j = 0; j < blocksArray[0].length; j++) {	
+				if(blocksArray[i][j] == 1) {
+					float blockWidth = 100*0.3f;
+					float blockHeight = 100*0.6f;
+					if(ballVectorX > 0) {
+						if(ballVectorY > 0) {
+							//Going up to the right
+							
+							//check top right
+							float topRight = getTHit((float)(i*80)+60+(blockWidth/2), (float)(j*40)+132+(blockHeight/2), -1.0f, 0.0f, 50, 50);
+							//check top left
+							float topLeft = getTHit((float)(i*80)+60-(blockWidth/2), (float)(j*40)+132+(blockHeight/2), -1.0f, 0.0f, 50, 50);
+							//check bottom right
+							float bottomRight = getTHit((float)(i*80)+60+(blockWidth/2), (float)(j*40)+132-(blockHeight/2), -1.0f, 0.0f, 50, 50);
+							
+							if(topRight < topLeft) {
+								if(topRight < bottomRight) {
+									//topRight
+									if(topRight < 1 && topRight < 0) {
+										System.out.println("TopRight");
+										if( ballPositionY+50 < i*80+60+blockHeight/2 && ballPositionY+50 > i*80+60-blockHeight/2) {
+											if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) {
+												blocksArray[i][j] = 0;
+												getNewVector(-1.0f,0.0f);
+												//ballVectorX = -ballVectorX;
+											}
+										}
+									}	
+								}else {
+									//bottomRight	
+									if(bottomRight < 1 && bottomRight < 0) {
+										System.out.println("BottomRight");
+										if( ballPositionY-50 < i*80+60+blockHeight/2 && ballPositionY-50 > i*80+60-blockHeight/2) {
+											if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) {
+												blocksArray[i][j] = 0;
+												getNewVector(-1.0f,0.0f);
+												//ballVectorX = -ballVectorX;
+											}
+										}
+									}	
+								}
+							}else{
+								if(topLeft < bottomRight) {
+									//topLeft	
+									if(topLeft < 1 && topLeft < 0) {
+										System.out.println("TopLeft");
+										if( ballPositionX+50 < j*40-132+blockHeight/2 && ballPositionX+50 > j*40-132-blockHeight/2) {
+											if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) {
+												blocksArray[i][j] = 0;
+												getNewVector(-1.0f,0.0f);
+												//ballVectorX = -ballVectorX;
+											}
+										}	
+									}	
+								} else {
+									//bottomRight
+									if(bottomRight < 1 && bottomRight < 0) {
+										float temp = ballPositionY-50;
+										float temp1 = i*80+60+blockHeight/2;
+										float temp2 = i*80+60-blockHeight/2;
+										System.out.println("BottomRight2");
+										System.out.println("ballPositionY: " + temp + "  " + temp1 + "," + temp2 );
+										if( ballPositionY-50 < i*80+60+blockHeight/2 && ballPositionY-50 > i*80+60-blockHeight/2) {
+											if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) {
+												blocksArray[i][j] = 0;
+												getNewVector(-1.0f,0.0f);
+												//ballVectorX = -ballVectorX;
+											}
+										}
+									}	
+								}
+							}
+							
+							/*
+							if(getTHit((float)(j*40)+132-(blockHeight/2), (float)(i*80)+60-(blockWidth/2), -1.0f, 0.0f, 50, 50) < 1 && getTHit((float)(j*40)+132-(blockHeight/2), (float)i*80+60-(blockWidth/2), -1.0f, 0.0f, 50, 50) > 0) {
+								if( ballPositionY-50 < i*80+60+blockHeight/2 && ballPositionY-50 > i*80+60-blockHeight) {
+									if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) {
+										blocksArray[i][j] = 0;
+										getNewVector(-10.f,0.0f);
+										//ballVectorX = -ballVectorX;
+									}
+								}
+							}
+							*/
+							
+							
+						}else {
+							/*if(getTHit((float)(j*40)+132-(blockHeight/2), (float)(i*80)+60-(blockWidth/2), 1.0f, 0.0f, 50, 50) < 1 && getTHit((float)(j*40)+132-(blockHeight/2), (float)i*80+60-(blockWidth/2), 1.0f, 0.0f, 50, 50) > 0) {
+								if( ballPositionY-50 < i*80+60+blockHeight/2 && ballPositionY-50 > i*80+60-blockHeight) {
+									if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) {
+										blocksArray[i][j] = 0;
+										getNewVector(-10.f,0.0f);
+										//ballVectorX = -ballVectorX;
+									}
+								}
+							}
+							*/
+						}
+					} else {
+						/*
+						if(ballVectorY > 0) {
+							//Niðri vinsta megin
+							//left = (i*80)+60-(blockWidth/2);
+							//right = (i*80)+60+(blockWidth/2);
+							//up = (j*40)+132+(blockHeight/2);
+							//down = (j*40)-132-(blockHeight/2);
+							
+							if(getTHit((float)(j*40)+132+(blockHeight/2), (float)(i*80)+60, -1.0f, 0.0f, -50, -50) < 1 && getTHit((float)(j*40)+132+(blockHeight/2), (float)i*80+60, -1.0f, 0.0f, -50, -50) > 0) {
+								if( ballPositionY-50 < i*80+60+blockHeight/2 && ballPositionY-50 > i*80+60-blockHeight) {
+									if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) {
+										blocksArray[i][j] = 0;
+										ballVectorX = -ballVectorX;
+									}
+								}
+							}	
+							
+						}else {
+							if(getTHit((float)(j*40)+132+(blockHeight/2), (float)(i*80)+60, 1.0f, 0.0f, -50, -50) < 1 && getTHit((float)(j*40)+132+(blockHeight/2), (float)i*80+60, 1.0f, 0.0f, -50, -50) > 0) {
+								if( ballPositionY-50 < i*80+60+blockHeight/2 && ballPositionY-50 > i*80+60-blockHeight) {
+									if((float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX) > 0) {
+										blocksArray[i][j] = 0;
+										ballVectorX = -ballVectorX;
+									}
+								}
+							}
+						}
+						*/
+					}
+				}
+			}
 		}
 	}
 
@@ -239,14 +375,16 @@ public class Pong extends ApplicationAdapter {
 		}
 		
 		if (ballVectorX < 0) {
-			paddleReflection(paddle1PositionX, paddle1PositionY, 4, 5);
+			paddleReflection(paddle1PositionX, paddle1PositionY, 4, 5, -50, -50);
+			blockReflection();
 		} else {
-			paddleReflection(paddle2PositionX, paddle2PositionY, 0, 1);
+			paddleReflection(paddle2PositionX, paddle2PositionY, 0, 1, 50, 50);
+			blockReflection();
 		}
 		if (ballVectorY < 0) {
-			edgeReflection(0, 5, false);
+			edgeReflection(0, 5, false, -50, -50);
 		} else {
-			edgeReflection(0, Gdx.graphics.getHeight()-5, true);
+			edgeReflection(0, Gdx.graphics.getHeight()-5, true, 50, 50);
 			
 		}
 		if (ballPositionX <= 0) {
@@ -344,9 +482,9 @@ public class Pong extends ApplicationAdapter {
 	
 	private void drawBlocks(int level) {
 		for(int i = 0; i < blocksArray.length; i++) {
-			for(int j = 0; j < blocksArray[0].length; j++) {
-				if(blocksArray[i][j] > 0) {
-					drawBlock(j*40+132, i*80+60);
+			for(int j = 0; j < blocksArray[0].length; j++) {	
+				if (blocksArray[i][j] == 1) {
+					drawBlock((j*40)+132, (i*80) +60);	
 				}
 			}
 		}
@@ -356,11 +494,12 @@ public class Pong extends ApplicationAdapter {
 	{
 		//do all actual drawing and rendering here
 		drawBackround();
-		//drawBlocks(1);
 		
 		for(int i = 0; i < Gdx.graphics.getHeight(); i+=Gdx.graphics.getHeight()/9) {
 			drawMiddle(Gdx.graphics.getWidth()/2, i);
 		}
+		
+		drawBlocks(1);
 		
 		drawPaddle (paddle1PositionX, paddle1PositionY);
 		drawPaddle (paddle2PositionX, paddle2PositionY);
