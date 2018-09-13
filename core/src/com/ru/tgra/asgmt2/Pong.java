@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g3d.particles.influencers.ColorInfluencer.Random;
 
 import java.io.Console;
 import java.nio.FloatBuffer;
@@ -28,6 +29,15 @@ public class Pong extends ApplicationAdapter {
 
 	private int colorLoc;
 	
+	private float player1Score;
+	private float player2Score;
+	
+	private boolean player1Touch;
+	private boolean player2Touch;
+	private int lastTouch; 
+	
+	
+
 	private float paddleSize;
 	private float paddleSpeed;
 	
@@ -117,6 +127,13 @@ public class Pong extends ApplicationAdapter {
 		//COLOR IS SET HERE
 		Gdx.gl.glUniform4f(colorLoc, 0.7f, 0.2f, 0, 1);
 
+		player1Score = 1;
+		player2Score = 1;
+		
+		player1Touch = false;
+		player2Touch = false;
+		lastTouch = 0;
+		
 		paddleSize = 100.0f;
 		paddleSpeed = 4.0f;
 		
@@ -144,8 +161,12 @@ public class Pong extends ApplicationAdapter {
 		
 		ballVectorX = 0;
 		ballVectorY = 0;
-		ballPositionX = Gdx.graphics.getWidth() - 200.0f;
-		ballPositionY = 50.0f;
+		if(Math.random() < 0.5) {
+			ballPositionX = 200.0f;
+		} else {
+			ballPositionX = Gdx.graphics.getWidth()-200.0f;
+		}
+		ballPositionY = 200.0f;
 		
 		int row = 20;
 		int col = 9;
@@ -220,6 +241,13 @@ public class Pong extends ApplicationAdapter {
 				getNewPaddleVector(paddleY);
 				ballPositionX = ballVectorX * THit + getPHitX(THit);
 				ballPositionY = ballVectorY * THit + getPHitY(THit);
+				if(paddleX == 200) {
+					player1Touch = true;
+					lastTouch = 1;
+				} else {
+					player2Touch = true;
+					lastTouch = 2;
+				}
 			}
 		}
 	}
@@ -503,12 +531,14 @@ public class Pong extends ApplicationAdapter {
 			
 		}
 		if (ballPositionX <= 0) {
-			ballPositionX = 200.0f;
+			player2Score += 10;
+			ballPositionX = 200;
 			ballPositionY = 200.0f;
 			ballVectorX = 0;
 			ballVectorY = 0;
 		}else if (ballPositionX >= Gdx.graphics.getWidth()) {
-			ballPositionX = 200.0f;
+			player1Score += 10;
+			ballPositionX = Gdx.graphics.getWidth()-200.0f;
 			ballPositionY = 200.0f;
 			ballVectorX = 0;
 			ballVectorY = 0;
@@ -529,15 +559,15 @@ public class Pong extends ApplicationAdapter {
 			}
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.D)) {
-			if (ballVectorX == 0 && 0 == ballVectorY) {
-				ballVectorX = 3;
+			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == 200) {
+				ballVectorX = -3;
 				ballVectorY = -3;
 			}
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.A)) {
-			if (ballVectorX == 0 && 0 == ballVectorY) {
+			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == 200) {
 				ballVectorX = -3;
-				ballVectorY = -3;
+				ballVectorY = 3;
 			}
 		}
 
@@ -550,6 +580,18 @@ public class Pong extends ApplicationAdapter {
 		if(Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
 			if (paddle2PositionY-paddleSize > 0) {
 				paddle2PositionY -= paddleSpeed;
+			}
+		}
+		if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == Gdx.graphics.getWidth()-200) {
+				ballVectorX = 3;
+				ballVectorY = -3;
+			}
+		}
+		if(Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == Gdx.graphics.getWidth()-200) {
+				ballVectorX = 3;
+				ballVectorY = 3;
 			}
 		}
 		
@@ -591,7 +633,7 @@ public class Pong extends ApplicationAdapter {
 		setModelMatrixScale(0.3f, 0.6f);
 		setModelMatrixTranslation(x, y);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
-		Gdx.gl.glUniform4f(colorLoc, 0.5f, 0.5f, 0.2f, 1);
+		Gdx.gl.glUniform4f(colorLoc, 1f, 1f, 1, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
 	}
 	
@@ -604,6 +646,27 @@ public class Pong extends ApplicationAdapter {
 			}
 		}
 	}
+	
+	private void drawScore() {
+		//player2
+		clearModelMatrix();
+		setModelMatrixScale(10.2f, 80f);
+		setModelMatrixTranslation((Gdx.graphics.getWidth()/2), 20);
+		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+		Gdx.gl.glUniform4f(colorLoc, 0.3f, 0.3f, 0.3f, 1);
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+		
+		//player1
+		float player1Dis = (player2Score/(player1Score+player2Score))*10.2f*50;
+		float player1Size = (player1Score/(player1Score+player2Score))*10.2f;
+		clearModelMatrix();
+		setModelMatrixScale(player1Size, 80f);
+		setModelMatrixTranslation((Gdx.graphics.getWidth()/2)-player1Dis, 20);
+		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+		Gdx.gl.glUniform4f(colorLoc, 0.2f, 0.2f, 0.2f, 1);
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+		
+	}
 
 	private void display()
 	{
@@ -613,6 +676,8 @@ public class Pong extends ApplicationAdapter {
 		for(int i = 0; i < Gdx.graphics.getHeight(); i+=Gdx.graphics.getHeight()/9) {
 			drawMiddle(Gdx.graphics.getWidth()/2, i);
 		}
+		
+		drawScore();
 		
 		drawBlocks(1);
 		
