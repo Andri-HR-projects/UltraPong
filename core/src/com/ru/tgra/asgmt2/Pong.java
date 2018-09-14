@@ -7,8 +7,6 @@ import com.badlogic.gdx.graphics.GL20;
 
 import java.nio.FloatBuffer;
 
-import javax.xml.transform.Templates;
-
 import com.badlogic.gdx.utils.BufferUtils;
 
 public class Pong extends ApplicationAdapter {
@@ -92,13 +90,13 @@ public class Pong extends ApplicationAdapter {
 	
 		Gdx.gl.glLinkProgram(renderingProgramID);
 
-		positionLoc				= Gdx.gl.glGetAttribLocation(renderingProgramID, "a_position");
+		positionLoc	= Gdx.gl.glGetAttribLocation(renderingProgramID, "a_position");
 		Gdx.gl.glEnableVertexAttribArray(positionLoc);
 
-		modelMatrixLoc			= Gdx.gl.glGetUniformLocation(renderingProgramID, "u_modelMatrix");
+		modelMatrixLoc= Gdx.gl.glGetUniformLocation(renderingProgramID, "u_modelMatrix");
 		projectionMatrixLoc	= Gdx.gl.glGetUniformLocation(renderingProgramID, "u_projectionMatrix");
 
-		colorLoc				= Gdx.gl.glGetUniformLocation(renderingProgramID, "u_color");
+		colorLoc= Gdx.gl.glGetUniformLocation(renderingProgramID, "u_color");
 
 		Gdx.gl.glUseProgram(renderingProgramID);
 
@@ -163,23 +161,24 @@ public class Pong extends ApplicationAdapter {
 		paddle1PositionX = 10.0f;
 		paddle1PositionY = 330.0f;
 		
-		paddle2PositionX = Gdx.graphics.getWidth() - 10;
+		paddle2PositionX = screenWidth - 10;
 		paddle2PositionY = 200.0f;
 		
 		ballVectorX = 0;
 		ballVectorY = 0;
-		ballSize = 50*0.2f/2;
+		ballSize = 50*0.2f;
 		if(Math.random() < 0.5) {
 			ballPositionX = 200.0f;
 		} else {
-			ballPositionX = Gdx.graphics.getWidth()-200.0f;
+			ballPositionX = screenWidth-200.0f;
 		}
-		ballPositionY = Gdx.graphics.getHeight()/2;
+		ballPositionY = screenHeight/2;
 		
 		int row = 20;
 		int col = 9;
 		
 		blocksArray = new float[row][col];
+		
 		for(int i = 5; i+5 < blocksArray.length; i++) {
 			for(int j = 0; j+0 < blocksArray[0].length; j++) {
 				if(!(i >= 7 && i <= 12 && j >= 2 && j <= 6)) {
@@ -197,41 +196,34 @@ public class Pong extends ApplicationAdapter {
 		
 	}
 	
+	//THit calculation
 	private float getTHit(float BX, float BY, float normalX, float normalY, float ballX, float ballY) {
 		return (normalX*(BX-ballPositionX-ballX)+normalY*(BY-ballPositionY-ballY))/(normalX*ballVectorX + normalY*ballVectorY);
 	}
-	
+	//PHit calculation for x-axis
 	private float getPHitX(float THit) {
 		return ballPositionX + ballVectorX*THit;
 	}
-	
+	//PHit calculation for y-axis
 	private float getPHitY(float THit) {
 		return ballPositionY + ballVectorY*THit;
 	}
 	
 	private void getNewVector(float normalPaddleX, float normalPaddleY) {
+		//Normal reflection calculation
 		float denominator = (float) Math.sqrt(normalPaddleX*normalPaddleX + normalPaddleY*normalPaddleY);
 		float a = 2*(ballVectorX*(normalPaddleX/denominator)+ballVectorY*(normalPaddleY/denominator));
 		//X axis
 		ballVectorX = 1.0f*(ballVectorX - (a*(normalPaddleX/denominator)));
 		//Y axis
 		ballVectorY = 1.0f*(ballVectorY - (a*(normalPaddleY/denominator)));
-		
-		if(ballVectorX < 0) {
-			normalPaddleX = 1;
-		}else {
-			normalPaddleX = -1;
-		}
-		if(ballVectorY < 0) {
-			normalPaddleX = -1;
-		}else {
-			normalPaddleX = 1;
-		}
 	}
 	
 	private void getNewPaddleVector(float paddleY) {
-		//Can be a constant but have it here if i want the game to speed up
-		float totalVectorLenght = 9;//(float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX);
+		//Custom reflection that changes depending on were you hit the ball on the paddle
+		//It is now a constant but you change that here if i want the game to speed up when ball touches paddle
+		//float totalVectorLenght = 1.01 * totalVectorLenght;
+		float totalVectorLenght = 9;
 
 		if(ballPositionY-paddleY > 0) {
 			ballVectorY = ((ballPositionY-paddleY)/100)*4;
@@ -246,8 +238,8 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private void paddleReflection(float paddleX, float paddleY, float ballX, float ballY) {
+		//checks if ball is touching paddle
 		float THit = getTHit(paddleX, paddleY,normalPaddleX, normalPaddleY, ballX, ballY);
-		//System.out.println(THit);
 		if(1 > THit && THit >= 0) {
 			if( getPHitY(THit) < paddleY+100 && getPHitY(THit) > paddleY-100 ) {
 				getNewPaddleVector(paddleY);
@@ -265,6 +257,7 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private void edgeReflection(float BX, float BY, boolean top, float ballX, float ballY) {
+		//checks if ball is touching bottom or top of screen
 		float THit = getTHit(BX, BY, normalEdgeX, normalEdgeY, ballX, ballY);
 		if(1 > THit) {
 			getNewVector(normalEdgeX, normalEdgeY);
@@ -273,43 +266,81 @@ public class Pong extends ApplicationAdapter {
 		}
 	}
 	
+	public float[] getStaticReflectionDirectionTHit() {
+		//helper function for staticReflection that returns correct THit dedpending on ball vector
+		float staticBlockHeight = 100;
+		float block1Thit;
+		float block2Thit;
+		float block3Thit;
+		float block4Thit;
+		if(ballVectorX >= 0) {
+			if(ballVectorY >= 0) {
+				block1Thit = getTHit(screenWidth/2+staticBlockHeight/2, screenHeight/2+staticBlockHeight/2, 1, 1, -ballSize, -ballSize);
+				block2Thit = getTHit(screenWidth/2+staticBlockHeight/2, screenHeight/2-staticBlockHeight/2, 1, -1, -ballSize, ballSize);
+				block3Thit = getTHit(screenWidth/2-staticBlockHeight/2, screenHeight/2-staticBlockHeight/2, -1, -1, ballSize, ballSize);
+				block4Thit = getTHit(screenWidth/2-staticBlockHeight/2, screenHeight/2+staticBlockHeight/2, -1, 1, ballSize, -ballSize);
+				
+			} else {
+				block1Thit = getTHit(screenWidth/2+staticBlockHeight/2, screenHeight/2+staticBlockHeight/2, 1, 1, ballSize, -ballSize);
+				block2Thit = getTHit(screenWidth/2+staticBlockHeight/2, screenHeight/2-staticBlockHeight/2, 1, -1, -ballSize, -ballSize);
+				block3Thit = getTHit(screenWidth/2-staticBlockHeight/2, screenHeight/2-staticBlockHeight/2, -1, -1, -ballSize, ballSize);
+				block4Thit = getTHit(screenWidth/2-staticBlockHeight/2, screenHeight/2+staticBlockHeight/2, -1, 1, ballSize, ballSize);
+			}
+		}else {
+			if(ballVectorY <= 0) {
+				block1Thit = getTHit(screenWidth/2+staticBlockHeight/2, screenHeight/2+staticBlockHeight/2, 1, 1, ballSize, ballSize);
+				block2Thit = getTHit(screenWidth/2+staticBlockHeight/2, screenHeight/2-staticBlockHeight/2, 1, -1, ballSize, -ballSize);
+				block3Thit = getTHit(screenWidth/2-staticBlockHeight/2, screenHeight/2-staticBlockHeight/2, -1, -1, -ballSize, -ballSize);
+				block4Thit = getTHit(screenWidth/2-staticBlockHeight/2, screenHeight/2+staticBlockHeight/2, -1, 1, -ballSize, ballSize);
+				
+			} else {
+				block1Thit = getTHit(screenWidth/2+staticBlockHeight/2, screenHeight/2+staticBlockHeight/2, 1, 1, -ballSize, ballSize);
+				block2Thit = getTHit(screenWidth/2+staticBlockHeight/2, screenHeight/2-staticBlockHeight/2, 1, -1, ballSize, ballSize);
+				block3Thit = getTHit(screenWidth/2-staticBlockHeight/2, screenHeight/2-staticBlockHeight/2, -1, -1, ballSize, -ballSize);
+				block4Thit = getTHit(screenWidth/2-staticBlockHeight/2, screenHeight/2+staticBlockHeight/2, -1, 1, -ballSize, -ballSize);
+				
+			}
+		}
+		float[] returnArray = {block1Thit, block2Thit, block3Thit, block4Thit, getLowestThit(block1Thit, block2Thit, block3Thit, block4Thit)};
+		return returnArray;
+		
+	}
+	
 	public void staticReflection() {
-		float block1Thit = getTHit(Gdx.graphics.getWidth()/2+50, Gdx.graphics.getHeight()/2+50, 1, 1, 0, 0);
-		float block2Thit = getTHit(Gdx.graphics.getWidth()/2+50, Gdx.graphics.getHeight()/2-50, 1, -1, 0, 0);
-		float block3Thit = getTHit(Gdx.graphics.getWidth()/2-50, Gdx.graphics.getHeight()/2-50, -1, -1, 0, 0);
-		float block4Thit = getTHit(Gdx.graphics.getWidth()/2-50, Gdx.graphics.getHeight()/2+50, -1, 1, 0, 0);
-		float lowestThit = getLowestThit(block1Thit, block2Thit, block3Thit, block4Thit);
-
+		//checks if ball corners is touching orange diamond
+		float staticBlockHeight = 100;
+		float[] tempArray = getStaticReflectionDirectionTHit();
+		float block1Thit = tempArray[0];
+		float block2Thit = tempArray[1];
+		float block3Thit = tempArray[2];
+		float block4Thit = tempArray[3];
+		float lowestThit = tempArray[4];
 		
 		if (lowestThit < 1) {
 				if(block1Thit == lowestThit) {		
-					if(getPHitX(block1Thit) < Gdx.graphics.getWidth()/2+100 && getPHitX(block1Thit) > Gdx.graphics.getWidth()/2 
-						&&  getPHitY(block1Thit) < Gdx.graphics.getHeight()/2+100 && getPHitY(block1Thit) > Gdx.graphics.getHeight()/2) {
+					if(getPHitX(block1Thit) <= screenWidth/2+staticBlockHeight && getPHitX(block1Thit) >= screenWidth/2 
+						&&  getPHitY(block1Thit) <= screenHeight/2+staticBlockHeight && getPHitY(block1Thit) >= screenHeight/2) {
 						getNewVector(1, 1);
 						ballPositionX = ballVectorX * block1Thit + getPHitX(block1Thit);
 						ballPositionY = ballVectorY * block1Thit + getPHitY(block1Thit);
 					}
 				} else if (block2Thit == lowestThit) {
-					System.out.println(block2Thit + " " + lowestThit);
-					System.out.println(getPHitY(block2Thit));
-					System.out.println(Gdx.graphics.getHeight()/2-100);
-					if(getPHitX(block2Thit) < Gdx.graphics.getWidth()/2+100 && getPHitX(block2Thit) > Gdx.graphics.getWidth()/2 
-							&&  getPHitY(block2Thit) < Gdx.graphics.getHeight()/2 && getPHitY(block2Thit) > Gdx.graphics.getHeight()/2-100) {
-						System.out.println("Hit");
+					if(getPHitX(block2Thit) <= screenWidth/2+staticBlockHeight && getPHitX(block2Thit) >= screenWidth/2 
+							&&  getPHitY(block2Thit) <= screenHeight/2 && getPHitY(block2Thit) >= screenHeight/2-staticBlockHeight) {
 						getNewVector(1, -1);
 						ballPositionX = ballVectorX * block2Thit + getPHitX(block2Thit);
 						ballPositionY = ballVectorY * block2Thit + getPHitY(block2Thit);
 					}
 				} else if (block3Thit == lowestThit) {
-					if(getPHitX(block3Thit) < Gdx.graphics.getWidth()/2 && getPHitX(block3Thit) > Gdx.graphics.getWidth()/2-100 
-							&&  getPHitY(block3Thit) < Gdx.graphics.getHeight()/2 && getPHitY(block3Thit) > Gdx.graphics.getHeight()/2-100) {
+					if(getPHitX(block3Thit) <= screenWidth/2 && getPHitX(block3Thit) >= screenWidth/2-staticBlockHeight 
+							&&  getPHitY(block3Thit) <= screenHeight/2 && getPHitY(block3Thit) >= screenHeight/2-staticBlockHeight) {
 						getNewVector(-1, -1);
 						ballPositionX = ballVectorX * block3Thit + getPHitX(block3Thit);
 						ballPositionY = ballVectorY * block3Thit + getPHitY(block3Thit);
 					}
 				} else if (block4Thit == lowestThit) {
-					if(getPHitX(block4Thit) < Gdx.graphics.getWidth()/2 && getPHitX(block4Thit) > Gdx.graphics.getWidth()/2-100 
-							&&  getPHitY(block4Thit) < Gdx.graphics.getHeight()/2+100 && getPHitY(block4Thit) > Gdx.graphics.getHeight()/2) {
+					if(getPHitX(block4Thit) <= screenWidth/2 && getPHitX(block4Thit) >= screenWidth/2-staticBlockHeight 
+							&&  getPHitY(block4Thit) <= screenHeight/2+staticBlockHeight && getPHitY(block4Thit) >= screenHeight/2) {
 						getNewVector(-1, 1);
 						ballPositionX = ballVectorX * block4Thit + getPHitX(block4Thit);
 						ballPositionY = ballVectorY * block4Thit + getPHitY(block4Thit);
@@ -320,6 +351,7 @@ public class Pong extends ApplicationAdapter {
 	
 	
 	private float getLowestThit(float a, float b, float c, float d) {
+		//Finds lowest number that is not less then zero
 			float lowest = Float.MAX_VALUE;
 			if(a >= 0 && a < lowest) {
 				lowest = a;
@@ -337,8 +369,8 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private void blockReflectionHorizontal(float THit, int i, int j, boolean left) {
+		//Helper function for checking if ball is touching a block horizontally
 		if(getPHitY(THit) <= (j*blockPositionY)+blockMarginY+blockHeight && getPHitY(THit) >= (j*blockPositionY)+blockMarginY-blockHeight) {	
-			System.out.println("hit Horizontal" + THit);
 			blocksArray[i][j] = 0;
 			if(player1Touch == true && player1Touch == player2Touch) {
 				if(lastTouch == 1) {
@@ -358,8 +390,8 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private void blockReflectionVerticle(float THit, int i, int j, boolean down) {
+		//Helper function for checking if ball is touching a block vertically
 		if(getPHitX(THit) <= (i*blockPositionX)+blockMarginX+blockWidth && getPHitX(THit) >= (i*blockPositionX)+blockMarginX-blockWidth) {						
-			System.out.println("hit Verticle" + THit);
 			blocksArray[i][j] = 0;
 			if(player1Touch == true && player1Touch == player2Touch) {
 				if(lastTouch == 1) {
@@ -379,6 +411,7 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private void blockReflection() {
+		//checks for all remaining block if there is any that is touching a corners of the ball.
 		for(int i = 0; i < blocksArray.length; i++) {
 			for(int j = 0; j < blocksArray[0].length; j++) {	
 				if(blocksArray[i][j] == 1) {
@@ -499,8 +532,6 @@ public class Pong extends ApplicationAdapter {
 									}
 								}
 							}
-
-
 						}else {
 							//ball moving down
 							float bottomRightVerticle 	= getTHit(X+blockWidth/2, Y+blockHeight/2,  0.0f,  1.0f,  ballSize, -ballSize);
@@ -551,40 +582,47 @@ public class Pong extends ApplicationAdapter {
 
 		}
 
+		//checks if ball is touching orange diamond
 		staticReflection();
+		
 		if (ballVectorX < 0) {
-			paddleReflection(paddle1PositionX, paddle1PositionY, -30, 0);
+			//check if ball is touching paddle or breakable block
+			paddleReflection(paddle1PositionX, paddle1PositionY, -ballSize*2, 0);
 			blockReflection();
 		} else {
-			paddleReflection(paddle2PositionX, paddle2PositionY, 30, 0);
+			paddleReflection(paddle2PositionX, paddle2PositionY, ballSize*2, 0);
 			blockReflection();
 		}
+		//checks if ball is touching top or bottom edge
 		if (ballVectorY < 0) {
 			edgeReflection(0, 5, false, -5, -5);
 		} else {
-			edgeReflection(0, Gdx.graphics.getHeight()-5, true, 5, 5);
+			edgeReflection(0, screenHeight-5, true, 5, 5);
 			
 		}
+		
+		//Check if player scored
 		if (ballPositionX <= 0) {
 			player2Score += 10;
-			ballPositionX = Gdx.graphics.getWidth()-200.0f;
-			ballPositionY = Gdx.graphics.getHeight()/2;
+			ballPositionX = screenWidth-200.0f;
+			ballPositionY = screenHeight/2;
 			ballVectorX = 0;
 			ballVectorY = 0;
-		}else if (ballPositionX >= Gdx.graphics.getWidth()) {
+		}else if (ballPositionX >= screenWidth) {
 			player1Score += 10;
 			ballPositionX = 200.0f;
-			ballPositionY = Gdx.graphics.getHeight()/2;
+			ballPositionY = screenHeight/2;
 			ballVectorX = 0;
 			ballVectorY = 0;
 		}
 		
+		//Adding displacement to ball
 		ballPositionX += ballVectorX; 
 		ballPositionY += ballVectorY;
 		
 		//Paddle1 Movement
 		if(Gdx.input.isKeyPressed(Input.Keys.W)) {
-			if (paddle1PositionY+paddleSize < Gdx.graphics.getHeight()) {
+			if (paddle1PositionY+paddleSize < screenHeight) {
 				paddle1PositionY += paddleSpeed;
 			} 
 		}
@@ -608,7 +646,7 @@ public class Pong extends ApplicationAdapter {
 
 		//Paddle2 Movement
 		if(Gdx.input.isKeyPressed(Input.Keys.UP)) {
-			if (paddle2PositionY+paddleSize < Gdx.graphics.getHeight()) {
+			if (paddle2PositionY+paddleSize < screenHeight) {
 				paddle2PositionY += paddleSpeed;
 			}
 		}
@@ -618,13 +656,13 @@ public class Pong extends ApplicationAdapter {
 			}
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == Gdx.graphics.getWidth()-200) {
+			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == screenWidth-200) {
 				ballVectorX = 2;
 				ballVectorY = -2;
 			}
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == Gdx.graphics.getWidth()-200) {
+			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == screenWidth-200) {
 				ballVectorX = 2;
 				ballVectorY = 2;
 			}
@@ -638,6 +676,7 @@ public class Pong extends ApplicationAdapter {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 	}
 	private void drawPaddle(float x, float y) {
+		//draws both paddles
 		clearModelMatrix();
 		setModelMatrixScale(0.5f, 2.0f);
 		setModelMatrixTranslation(x, y);	
@@ -655,15 +694,17 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private void drawMiddle() {
+		//draws orange middle line
 		clearModelMatrix();
 		setModelMatrixScale(0.05f, 20f);
-		setModelMatrixTranslation(Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
+		setModelMatrixTranslation(screenWidth/2, screenHeight/2);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0.0f, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
 	}
 	
 	private void drawBlock(float x, float y) {
+		//draws individual blocks
 		clearModelMatrix();
 		setModelMatrixScale(0.3f, 0.6f);
 		setModelMatrixTranslation(x, y);
@@ -673,6 +714,7 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private void drawBlocks(int level) {
+		//draws only unbroken blocks
 		for(int i = 0; i < blocksArray.length; i++) {
 			for(int j = 0; j < blocksArray[0].length; j++) {	
 				if (blocksArray[i][j] == 1) {
@@ -686,7 +728,7 @@ public class Pong extends ApplicationAdapter {
 		//player2
 		clearModelMatrix();
 		setModelMatrixScale(10.3f, 80f);
-		setModelMatrixTranslation((Gdx.graphics.getWidth()/2), 20);
+		setModelMatrixTranslation((screenWidth/2), 20);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 		Gdx.gl.glUniform4f(colorLoc, 0.2f, 0.2f, 0.2f, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
@@ -696,7 +738,7 @@ public class Pong extends ApplicationAdapter {
 		float player1Size = (player1Score/(player1Score+player2Score))*10.2f;
 		clearModelMatrix();
 		setModelMatrixScale(player1Size, 80f);
-		setModelMatrixTranslation((Gdx.graphics.getWidth()/2)-player1Dis, 20);
+		setModelMatrixTranslation((screenWidth/2)-player1Dis, 20);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 		Gdx.gl.glUniform4f(colorLoc, 0.1f, 0.1f, 0.1f, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
@@ -704,31 +746,32 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private void drawWinner() {
+		//Change ending screen depending on final score
 		if(player1Score < player2Score) {
 			clearModelMatrix();
 			setModelMatrixScale(2f, 6f);
-			setModelMatrixTranslation(Gdx.graphics.getWidth()/2+300, Gdx.graphics.getHeight()/2);
+			setModelMatrixTranslation(screenWidth/2+300, screenHeight/2);
 			Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 			Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
 			Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
 			
 			clearModelMatrix();
 			setModelMatrixScale(2f, 6f);
-			setModelMatrixTranslation(Gdx.graphics.getWidth()/2-300, Gdx.graphics.getHeight()/2);
+			setModelMatrixTranslation(screenWidth/2-300, screenHeight/2);
 			Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 			Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
 			Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
 		} else if (player2Score < player1Score) {
 			clearModelMatrix();
 			setModelMatrixScale(2f, 6f);
-			setModelMatrixTranslation(Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
+			setModelMatrixTranslation(screenWidth/2, screenHeight/2);
 			Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 			Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
 			Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
 		} else {
 			clearModelMatrix();
 			setModelMatrixScale(6f, 2f);
-			setModelMatrixTranslation(Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
+			setModelMatrixTranslation(screenWidth/2, screenHeight/2);
 			Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 			Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
 			Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
@@ -737,27 +780,35 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private void drawStaticBlock() {
+		//Draws orange diamond in the middle of the screen
+		
+		//Draws first quarter of diamond
 		clearModelMatrix();
 		setModelMatrixScale(1f, 1f);
-		setModelMatrixTranslation(Gdx.graphics.getWidth()/2+50, Gdx.graphics.getHeight()/2+50);
+		setModelMatrixTranslation(screenWidth/2+50, screenHeight/2+50);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLES, 0, 3);
+		
+		//Draws second quarter of diamond
 		clearModelMatrix();
 		setModelMatrixScale(-1f, 1f);
-		setModelMatrixTranslation(Gdx.graphics.getWidth()/2-50, Gdx.graphics.getHeight()/2+50);
+		setModelMatrixTranslation(screenWidth/2-50, screenHeight/2+50);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLES, 0, 3);
+		
+		//Draws third of diamond
 		clearModelMatrix();
 		setModelMatrixScale(1f, -1f);
-		setModelMatrixTranslation(Gdx.graphics.getWidth()/2+50, Gdx.graphics.getHeight()/2-50);
+		setModelMatrixTranslation(screenWidth/2+50, screenHeight/2-50);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLES, 0, 3);
+		//Draws forth quarter of diamond
 		clearModelMatrix();
 		setModelMatrixScale(-1f, -1f);
-		setModelMatrixTranslation(Gdx.graphics.getWidth()/2-50, Gdx.graphics.getHeight()/2-50);
+		setModelMatrixTranslation(screenWidth/2-50, screenHeight/2-50);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
 		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLES, 0, 3);
@@ -770,7 +821,8 @@ public class Pong extends ApplicationAdapter {
 		
 		drawScore();
 		
-		boolean emptyArray = false;
+		//checks if all blocks have been broken
+		boolean emptyArray = true;
 		for (int i = 0; i < blocksArray.length; i++) {
 			for (int j = 0; j < blocksArray[0].length; j++) {
 			  if (blocksArray[i][j] != 0) {
@@ -779,6 +831,7 @@ public class Pong extends ApplicationAdapter {
 			  }
 			}
 		}
+		//continues game if at least one block is unbroken
 		if(!emptyArray) {
 			drawStaticBlock();
 			drawMiddle();
