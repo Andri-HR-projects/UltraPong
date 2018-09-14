@@ -7,6 +7,8 @@ import com.badlogic.gdx.graphics.GL20;
 
 import java.nio.FloatBuffer;
 
+import javax.xml.transform.Templates;
+
 import com.badlogic.gdx.utils.BufferUtils;
 
 public class Pong extends ApplicationAdapter {
@@ -27,6 +29,9 @@ public class Pong extends ApplicationAdapter {
 
 	private int colorLoc;
 	
+	private float screenWidth;
+	private float screenHeight;
+	
 	private float player1Score;
 	private float player2Score;
 	
@@ -34,8 +39,6 @@ public class Pong extends ApplicationAdapter {
 	private boolean player2Touch;
 	private int lastTouch; 
 	
-	
-
 	private float paddleSize;
 	private float paddleSpeed;
 	
@@ -52,6 +55,7 @@ public class Pong extends ApplicationAdapter {
 	
 	private float ballVectorX;
 	private float ballVectorY;
+	private float ballSize;
 	private float ballPositionX;
 	private float ballPositionY;
 	
@@ -62,7 +66,7 @@ public class Pong extends ApplicationAdapter {
 	private float blockMarginY;
 	private float blockPositionX;
 	private float blockPositionY;
-
+	
 	@Override
 	public void create () {
 
@@ -126,6 +130,9 @@ public class Pong extends ApplicationAdapter {
 
 		//COLOR IS SET HERE
 		Gdx.gl.glUniform4f(colorLoc, 0.7f, 0.2f, 0, 1);
+		
+		screenHeight = Gdx.graphics.getHeight();
+		screenWidth = Gdx.graphics.getWidth();
 
 		player1Score = 1;
 		player2Score = 1;
@@ -161,12 +168,13 @@ public class Pong extends ApplicationAdapter {
 		
 		ballVectorX = 0;
 		ballVectorY = 0;
+		ballSize = 50*0.2f/2;
 		if(Math.random() < 0.5) {
 			ballPositionX = 200.0f;
 		} else {
 			ballPositionX = Gdx.graphics.getWidth()-200.0f;
 		}
-		ballPositionY = 200.0f;
+		ballPositionY = Gdx.graphics.getHeight()/2;
 		
 		int row = 20;
 		int col = 9;
@@ -174,7 +182,9 @@ public class Pong extends ApplicationAdapter {
 		blocksArray = new float[row][col];
 		for(int i = 5; i+5 < blocksArray.length; i++) {
 			for(int j = 0; j+0 < blocksArray[0].length; j++) {
-				blocksArray[i][j] = 1;
+				if(!(i >= 7 && i <= 12 && j >= 2 && j <= 6)) {
+					blocksArray[i][j] = 1;
+				}
 			}
 		}
 		
@@ -221,7 +231,7 @@ public class Pong extends ApplicationAdapter {
 	
 	private void getNewPaddleVector(float paddleY) {
 		//Can be a constant but have it here if i want the game to speed up
-		float totalVectorLenght = 3;//(float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX);
+		float totalVectorLenght = 9;//(float) Math.sqrt(ballVectorY*ballVectorY+ballVectorX*ballVectorX);
 
 		if(ballPositionY-paddleY > 0) {
 			ballVectorY = ((ballPositionY-paddleY)/100)*4;
@@ -229,13 +239,13 @@ public class Pong extends ApplicationAdapter {
 			ballVectorY = ((ballPositionY-paddleY)/100)*4;
 		}		
 		if(ballVectorX > 0) {
-			ballVectorX = -2;//(float) -Math.sqrt(totalVectorLenght*totalVectorLenght-ballVectorY*ballVectorY);
+			ballVectorX = (float) -Math.sqrt(totalVectorLenght*totalVectorLenght-ballVectorY*ballVectorY);
 		} else {
-			ballVectorX = 2;//(float) Math.sqrt(Math.abs(totalVectorLenght*totalVectorLenght-ballVectorY*ballVectorY));
+			ballVectorX = (float) Math.sqrt(Math.abs(totalVectorLenght*totalVectorLenght-ballVectorY*ballVectorY));
 		}
 	}
 	
-	private void paddleReflection(float paddleX, float paddleY, int arrayX, int arrayY, float ballX, float ballY) {
+	private void paddleReflection(float paddleX, float paddleY, float ballX, float ballY) {
 		float THit = getTHit(paddleX, paddleY,normalPaddleX, normalPaddleY, ballX, ballY);
 		//System.out.println(THit);
 		if(1 > THit && THit >= 0) {
@@ -263,19 +273,64 @@ public class Pong extends ApplicationAdapter {
 		}
 	}
 	
+	public void staticReflection() {
+		float block1Thit = getTHit(Gdx.graphics.getWidth()/2+50, Gdx.graphics.getHeight()/2+50, 1, 1, 0, 0);
+		float block2Thit = getTHit(Gdx.graphics.getWidth()/2+50, Gdx.graphics.getHeight()/2-50, 1, -1, 0, 0);
+		float block3Thit = getTHit(Gdx.graphics.getWidth()/2-50, Gdx.graphics.getHeight()/2-50, -1, -1, 0, 0);
+		float block4Thit = getTHit(Gdx.graphics.getWidth()/2-50, Gdx.graphics.getHeight()/2+50, -1, 1, 0, 0);
+		float lowestThit = getLowestThit(block1Thit, block2Thit, block3Thit, block4Thit);
+
+		
+		if (lowestThit < 1) {
+				if(block1Thit == lowestThit) {		
+					if(getPHitX(block1Thit) < Gdx.graphics.getWidth()/2+100 && getPHitX(block1Thit) > Gdx.graphics.getWidth()/2 
+						&&  getPHitY(block1Thit) < Gdx.graphics.getHeight()/2+100 && getPHitY(block1Thit) > Gdx.graphics.getHeight()/2) {
+						getNewVector(1, 1);
+						ballPositionX = ballVectorX * block1Thit + getPHitX(block1Thit);
+						ballPositionY = ballVectorY * block1Thit + getPHitY(block1Thit);
+					}
+				} else if (block2Thit == lowestThit) {
+					System.out.println(block2Thit + " " + lowestThit);
+					System.out.println(getPHitY(block2Thit));
+					System.out.println(Gdx.graphics.getHeight()/2-100);
+					if(getPHitX(block2Thit) < Gdx.graphics.getWidth()/2+100 && getPHitX(block2Thit) > Gdx.graphics.getWidth()/2 
+							&&  getPHitY(block2Thit) < Gdx.graphics.getHeight()/2 && getPHitY(block2Thit) > Gdx.graphics.getHeight()/2-100) {
+						System.out.println("Hit");
+						getNewVector(1, -1);
+						ballPositionX = ballVectorX * block2Thit + getPHitX(block2Thit);
+						ballPositionY = ballVectorY * block2Thit + getPHitY(block2Thit);
+					}
+				} else if (block3Thit == lowestThit) {
+					if(getPHitX(block3Thit) < Gdx.graphics.getWidth()/2 && getPHitX(block3Thit) > Gdx.graphics.getWidth()/2-100 
+							&&  getPHitY(block3Thit) < Gdx.graphics.getHeight()/2 && getPHitY(block3Thit) > Gdx.graphics.getHeight()/2-100) {
+						getNewVector(-1, -1);
+						ballPositionX = ballVectorX * block3Thit + getPHitX(block3Thit);
+						ballPositionY = ballVectorY * block3Thit + getPHitY(block3Thit);
+					}
+				} else if (block4Thit == lowestThit) {
+					if(getPHitX(block4Thit) < Gdx.graphics.getWidth()/2 && getPHitX(block4Thit) > Gdx.graphics.getWidth()/2-100 
+							&&  getPHitY(block4Thit) < Gdx.graphics.getHeight()/2+100 && getPHitY(block4Thit) > Gdx.graphics.getHeight()/2) {
+						getNewVector(-1, 1);
+						ballPositionX = ballVectorX * block4Thit + getPHitX(block4Thit);
+						ballPositionY = ballVectorY * block4Thit + getPHitY(block4Thit);
+					}
+				}
+			}	
+	}
+	
 	
 	private float getLowestThit(float a, float b, float c, float d) {
 			float lowest = Float.MAX_VALUE;
-			if(a > 0 && a < lowest) {
+			if(a >= 0 && a < lowest) {
 				lowest = a;
 			}
-			if(b > 0 && b < lowest) {
+			if(b >= 0 && b < lowest) {
 				lowest = b;
 			}
-			if(c > 0 && c < lowest) {
+			if(c >= 0 && c < lowest) {
 				lowest = c;
 			}
-			if(d > 0 && d < lowest) {
+			if(d >= 0 && d < lowest) {
 				lowest = d;
 			}
 			return lowest;
@@ -324,98 +379,162 @@ public class Pong extends ApplicationAdapter {
 	}
 	
 	private void blockReflection() {
-		
 		for(int i = 0; i < blocksArray.length; i++) {
 			for(int j = 0; j < blocksArray[0].length; j++) {	
 				if(blocksArray[i][j] == 1) {
 					float X = (i*blockPositionX)+blockMarginX;
 					float Y = (j*blockPositionY)+blockMarginY;
-
 					
 					//ball moving to the right
 					if(ballVectorX > 0) {
 						//ball moving up
 						if(ballVectorY > 0) {
-							float topLeftVerticle = getTHit( X-blockWidth/2, Y-blockHeight/2, 0.0f, -1.0f, -5, 5);
-							float topRightVerticle = getTHit(X-blockWidth/2, Y-blockHeight/2, 0.0f, -1.0f, 5, 5);
-							float topRightHorizontal = getTHit(X-blockWidth/2, Y-blockHeight/2, -1.0f, 0.0f, 5, 5);
-							float bottomRightHorizontal = getTHit(X-blockWidth/2, Y-blockHeight/2, -1.0f, 0.0f, 5, -5);
-							float lowestThit = getLowestThit(topLeftVerticle, topRightVerticle, topRightHorizontal, bottomRightHorizontal);
+							float topLeftVerticle		= getTHit(X-blockWidth/2, Y-blockHeight/2,  0.0f, -1.0f, -ballSize,  ballSize);
+							float topRightVerticle 		= getTHit(X-blockWidth/2, Y-blockHeight/2,  0.0f, -1.0f,  ballSize,  ballSize);
+							float topRightHorizontal 	= getTHit(X-blockWidth/2, Y-blockHeight/2, -1.0f,  0.0f,  ballSize,  ballSize);
+							float bottomRightHorizontal = getTHit(X-blockWidth/2, Y-blockHeight/2, -1.0f,  0.0f,  ballSize, -ballSize);
+							float lowestThit 			= getLowestThit(topLeftVerticle, topRightVerticle, topRightHorizontal, bottomRightHorizontal);
 							
 							if (lowestThit < 1) {
-								if(topLeftVerticle == lowestThit) {
-									blockReflectionVerticle(topLeftVerticle, i, j, false);
-								} else if (topRightVerticle == lowestThit) {
-									blockReflectionVerticle(topRightVerticle, i, j, false);
-								} else if (topRightHorizontal == lowestThit) {
-									blockReflectionHorizontal(topRightHorizontal, i, j, false);
-								} else if (bottomRightHorizontal == lowestThit) {
-									blockReflectionHorizontal(bottomRightHorizontal, i, j, false);
+								if(j != 0 ) {
+									if(topLeftVerticle == lowestThit && blocksArray[i][j-1] == 0) {
+										blockReflectionVerticle(topLeftVerticle, i, j, false);
+									} else if (topRightVerticle == lowestThit && blocksArray[i][j-1] == 0) {
+										blockReflectionVerticle(topRightVerticle, i, j, false);
+									}
+								} else {
+									if(topLeftVerticle == lowestThit) {
+										blockReflectionVerticle(topLeftVerticle, i, j, false);
+									} else if (topRightVerticle == lowestThit) {
+										blockReflectionVerticle(topRightVerticle, i, j, false);
+									}
+								}
+								if(i != 0) {
+									if (topRightHorizontal == lowestThit && blocksArray[i-1][j] == 0) {
+										blockReflectionHorizontal(topRightHorizontal, i, j, false);
+									} else if (bottomRightHorizontal == lowestThit && blocksArray[i-1][j] == 0) {
+										blockReflectionHorizontal(bottomRightHorizontal, i, j, false);
+									}
+								}
+								else {
+									if (topRightHorizontal == lowestThit) {
+										blockReflectionHorizontal(topRightHorizontal, i, j, false);
+									} else if (bottomRightHorizontal == lowestThit) {
+										blockReflectionHorizontal(bottomRightHorizontal, i, j, false);
+									}
 								}
 							}
-
-
 						}else {
 							//ball moving down
-							float bottomLeftVerticle = getTHit(X-blockWidth/2, Y+blockHeight/2, 0.0f, 1.0f, -5, -5);
-							float bottomRightVerticle = getTHit(X-blockWidth/2, Y+blockHeight/2, 0.0f, 1.0f, 5, -5);
-							float bottomRightHorizontal = getTHit(X-blockWidth/2, Y+blockHeight/2, -1.0f, 0.0f, 5, -5);						
-							float topRightHorizontal = getTHit(X-blockWidth/2, Y+blockHeight/2, -1.0f, 0.0f, 5, 5);						
-							float lowestThit = getLowestThit(bottomLeftVerticle, bottomRightVerticle, bottomRightHorizontal, topRightHorizontal);
+							float bottomLeftVerticle 	= getTHit(X-blockWidth/2, Y+blockHeight/2,  0.0f,  1.0f, -ballSize, -ballSize);
+							float bottomRightVerticle 	= getTHit(X-blockWidth/2, Y+blockHeight/2,  0.0f,  1.0f,  ballSize, -ballSize);
+							float bottomRightHorizontal = getTHit(X-blockWidth/2, Y+blockHeight/2, -1.0f,  0.0f,  ballSize, -ballSize);						
+							float topRightHorizontal 	= getTHit(X-blockWidth/2, Y+blockHeight/2, -1.0f,  0.0f,  ballSize,  ballSize);						
+							float lowestThit 			= getLowestThit(bottomLeftVerticle, bottomRightVerticle, bottomRightHorizontal, topRightHorizontal);
 							
 							if (lowestThit < 1) {
-								if(bottomLeftVerticle == lowestThit) {
-									blockReflectionVerticle(bottomLeftVerticle, i, j, true);
-								} else if (bottomRightVerticle == lowestThit) {
-									blockReflectionVerticle(bottomRightVerticle, i, j, true);
-								} else if (bottomRightHorizontal == lowestThit) {
-									blockReflectionHorizontal(bottomRightHorizontal, i, j, false);
-								} else if (topRightHorizontal == lowestThit) {
-									blockReflectionHorizontal(topRightHorizontal, i, j, false);
+								if(j != 8) {
+									if(bottomLeftVerticle == lowestThit && blocksArray[i][j+1] == 0) {
+										blockReflectionVerticle(bottomLeftVerticle, i, j, true);
+									} else if (bottomRightVerticle == lowestThit && blocksArray[i][j+1] == 0) {
+										blockReflectionVerticle(bottomRightVerticle, i, j, true);
+									}
+								} else {
+									if(bottomLeftVerticle == lowestThit) {
+										blockReflectionVerticle(bottomLeftVerticle, i, j, true);
+									} else if (bottomRightVerticle == lowestThit) {
+										blockReflectionVerticle(bottomRightVerticle, i, j, true);
+									}
+								}
+								if(i != 0) {
+									if (bottomRightHorizontal == lowestThit && blocksArray[i-1][j] == 0) {
+										blockReflectionHorizontal(bottomRightHorizontal, i, j, false);
+									} else if (topRightHorizontal == lowestThit && blocksArray[i-1][j] == 0) {
+										blockReflectionHorizontal(topRightHorizontal, i, j, false);
+									}
+								} else {
+									if (bottomRightHorizontal == lowestThit) {
+										blockReflectionHorizontal(bottomRightHorizontal, i, j, false);
+									} else if (topRightHorizontal == lowestThit) {
+										blockReflectionHorizontal(topRightHorizontal, i, j, false);
+									}
 								}
 							}
-
 						}
 
 					} else { //ball moving to the left
 						//ball moving up
 						if(ballVectorY > 0) {
-							float topRightVerticle = getTHit(X+blockWidth/2, Y-blockHeight/2, 0.0f, -1.0f, 5, 5);
-							float topLeftVerticle = getTHit(X+blockWidth/2, Y-blockHeight/2, 0.0f, -1.0f, -5, 5);
-							float topLeftHorizontal = getTHit(X+blockWidth/2, Y-blockHeight/2, 1.0f, 0.0f, -5, 5);
-							float bottomLeftHorizontal = getTHit(X+blockWidth/2, Y-blockHeight/2, 1.0f, 0.0f, -5, -5);
-							float lowestThit = getLowestThit(topRightVerticle, topLeftVerticle, topLeftHorizontal, bottomLeftHorizontal);
+							float topRightVerticle 		= getTHit(X+blockWidth/2, Y-blockHeight/2,  0.0f, -1.0f,  ballSize,  ballSize);
+							float topLeftVerticle 		= getTHit(X+blockWidth/2, Y-blockHeight/2,  0.0f, -1.0f, -ballSize,  ballSize);
+							float topLeftHorizontal 	= getTHit(X+blockWidth/2, Y-blockHeight/2,  1.0f,  0.0f, -ballSize,  ballSize);
+							float bottomLeftHorizontal 	= getTHit(X+blockWidth/2, Y-blockHeight/2,  1.0f,  0.0f, -ballSize, -ballSize);
+							float lowestThit 			= getLowestThit(topRightVerticle, topLeftVerticle, topLeftHorizontal, bottomLeftHorizontal);
 							
 							if (lowestThit < 1) {
-								if(topRightVerticle == lowestThit) {
-									blockReflectionVerticle(topRightVerticle, i, j, false);
-								} else if (topLeftVerticle == lowestThit) {
-									blockReflectionVerticle(topLeftVerticle, i, j, false);
-								} else if (topLeftHorizontal == lowestThit) {
-									blockReflectionHorizontal(topLeftHorizontal, i, j, true);
-								} else if (bottomLeftHorizontal == lowestThit) {
-									blockReflectionHorizontal(bottomLeftHorizontal, i, j, true);
+								if(j != 0) {
+									if(topRightVerticle == lowestThit && blocksArray[i][j-1] == 0) {
+										blockReflectionVerticle(topRightVerticle, i, j, false);
+									} else if (topLeftVerticle == lowestThit && blocksArray[i][j-1] == 0) {
+										blockReflectionVerticle(topLeftVerticle, i, j, false);
+									} 
+								} else {
+									if(topRightVerticle == lowestThit) {
+										blockReflectionVerticle(topRightVerticle, i, j, false);
+									} else if (topLeftVerticle == lowestThit) {
+										blockReflectionVerticle(topLeftVerticle, i, j, false);
+									} 
+								}
+								if(i != 19) {
+									if (topLeftHorizontal == lowestThit && blocksArray[i+1][j] == 0) {
+										blockReflectionHorizontal(topLeftHorizontal, i, j, true);
+									} else if (bottomLeftHorizontal == lowestThit && blocksArray[i+1][j] == 0) {
+										blockReflectionHorizontal(bottomLeftHorizontal, i, j, true);
+									}
+								} else {
+									if (topLeftHorizontal == lowestThit) {
+										blockReflectionHorizontal(topLeftHorizontal, i, j, true);
+									} else if (bottomLeftHorizontal == lowestThit) {
+										blockReflectionHorizontal(bottomLeftHorizontal, i, j, true);
+									}
 								}
 							}
 
 
 						}else {
 							//ball moving down
-							float bottomRightVerticle = getTHit(X+blockWidth/2, Y+blockHeight/2, 0.0f, 1.0f, 5, -5);
-							float bottomLeftVerticle = getTHit(X+blockWidth/2, Y+blockHeight/2, 0.0f, 1.0f, -5, -5);
-							float bottomLeftHorizontal = getTHit(X+blockWidth/2, Y+blockHeight/2, 1.0f, 0.0f, -5, -5);						
-							float topLeftHorizontal = getTHit(X+blockWidth/2, Y+blockHeight/2, 1.0f, 0.0f, -5, 5);						
-							float lowestThit = getLowestThit(bottomRightVerticle, bottomLeftVerticle, bottomLeftHorizontal, topLeftHorizontal);
+							float bottomRightVerticle 	= getTHit(X+blockWidth/2, Y+blockHeight/2,  0.0f,  1.0f,  ballSize, -ballSize);
+							float bottomLeftVerticle 	= getTHit(X+blockWidth/2, Y+blockHeight/2,  0.0f,  1.0f, -ballSize, -ballSize);
+							float bottomLeftHorizontal 	= getTHit(X+blockWidth/2, Y+blockHeight/2,  1.0f,  0.0f, -ballSize, -ballSize);						
+							float topLeftHorizontal 	= getTHit(X+blockWidth/2, Y+blockHeight/2,  1.0f,  0.0f, -ballSize,  ballSize);						
+							float lowestThit 			= getLowestThit(bottomRightVerticle, bottomLeftVerticle, bottomLeftHorizontal, topLeftHorizontal);
 							
 							if (lowestThit < 1) {
-								if(bottomRightVerticle == lowestThit) {
-									blockReflectionVerticle(bottomRightVerticle, i, j, true);
-								} else if (bottomLeftVerticle == lowestThit) {
-									blockReflectionVerticle(bottomLeftVerticle, i, j, true);
-								} else if (bottomLeftHorizontal == lowestThit) {
-									blockReflectionHorizontal(bottomLeftHorizontal, i, j, true);
-								} else if (topLeftHorizontal == lowestThit) {
-									blockReflectionHorizontal(topLeftHorizontal, i, j, true);
+								if(j != 8) {
+									if(bottomRightVerticle == lowestThit && blocksArray[i][j+1] == 0) {
+										blockReflectionVerticle(bottomRightVerticle, i, j, true);
+									} else if (bottomLeftVerticle == lowestThit && blocksArray[i][j+1] == 0) {
+										blockReflectionVerticle(bottomLeftVerticle, i, j, true);
+									} 
+								} else {
+									if(bottomRightVerticle == lowestThit) {
+										blockReflectionVerticle(bottomRightVerticle, i, j, true);
+									} else if (bottomLeftVerticle == lowestThit) {
+										blockReflectionVerticle(bottomLeftVerticle, i, j, true);
+									} 
+								}
+								if(i != 19) {
+									if (bottomLeftHorizontal == lowestThit && blocksArray[i+1][j] == 0) {
+										blockReflectionHorizontal(bottomLeftHorizontal, i, j, true);
+									} else if (topLeftHorizontal == lowestThit && blocksArray[i+1][j] == 0) {
+										blockReflectionHorizontal(topLeftHorizontal, i, j, true);
+									}
+								} else {
+									if (bottomLeftHorizontal == lowestThit) {
+										blockReflectionHorizontal(bottomLeftHorizontal, i, j, true);
+									} else if (topLeftHorizontal == lowestThit) {
+										blockReflectionHorizontal(topLeftHorizontal, i, j, true);
+									}
 								}
 							}
 						}
@@ -431,12 +550,13 @@ public class Pong extends ApplicationAdapter {
 		{ 
 
 		}
-		
+
+		staticReflection();
 		if (ballVectorX < 0) {
-			paddleReflection(paddle1PositionX, paddle1PositionY, 4, 5, -25, 0);
+			paddleReflection(paddle1PositionX, paddle1PositionY, -30, 0);
 			blockReflection();
 		} else {
-			paddleReflection(paddle2PositionX, paddle2PositionY, 0, 1, 25, 0);
+			paddleReflection(paddle2PositionX, paddle2PositionY, 30, 0);
 			blockReflection();
 		}
 		if (ballVectorY < 0) {
@@ -447,14 +567,14 @@ public class Pong extends ApplicationAdapter {
 		}
 		if (ballPositionX <= 0) {
 			player2Score += 10;
-			ballPositionX = 200;
-			ballPositionY = 200.0f;
+			ballPositionX = Gdx.graphics.getWidth()-200.0f;
+			ballPositionY = Gdx.graphics.getHeight()/2;
 			ballVectorX = 0;
 			ballVectorY = 0;
 		}else if (ballPositionX >= Gdx.graphics.getWidth()) {
 			player1Score += 10;
-			ballPositionX = Gdx.graphics.getWidth()-200.0f;
-			ballPositionY = 200.0f;
+			ballPositionX = 200.0f;
+			ballPositionY = Gdx.graphics.getHeight()/2;
 			ballVectorX = 0;
 			ballVectorY = 0;
 		}
@@ -475,14 +595,14 @@ public class Pong extends ApplicationAdapter {
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.D)) {
 			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == 200) {
-				ballVectorX = -3;
-				ballVectorY = -3;
+				ballVectorX = -2;
+				ballVectorY = -2;
 			}
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.A)) {
 			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == 200) {
-				ballVectorX = -3;
-				ballVectorY = 3;
+				ballVectorX = -2;
+				ballVectorY = 2;
 			}
 		}
 
@@ -499,14 +619,14 @@ public class Pong extends ApplicationAdapter {
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
 			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == Gdx.graphics.getWidth()-200) {
-				ballVectorX = 3;
-				ballVectorY = -3;
+				ballVectorX = 2;
+				ballVectorY = -2;
 			}
 		}
 		if(Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
 			if (ballVectorX == 0 && 0 == ballVectorY && ballPositionX == Gdx.graphics.getWidth()-200) {
-				ballVectorX = 3;
-				ballVectorY = 3;
+				ballVectorX = 2;
+				ballVectorY = 2;
 			}
 		}
 		
@@ -534,12 +654,12 @@ public class Pong extends ApplicationAdapter {
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
 	}
 	
-	private void drawMiddle(float x, float y) {
+	private void drawMiddle() {
 		clearModelMatrix();
-		setModelMatrixScale(0.2f, 0.5f);
-		setModelMatrixTranslation(x, y);
+		setModelMatrixScale(0.05f, 20f);
+		setModelMatrixTranslation(Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
-		Gdx.gl.glUniform4f(colorLoc, 0.2f, 0.2f, 0.2f, 1);
+		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0.0f, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
 	}
 	
@@ -565,10 +685,10 @@ public class Pong extends ApplicationAdapter {
 	private void drawScore() {
 		//player2
 		clearModelMatrix();
-		setModelMatrixScale(10.2f, 80f);
+		setModelMatrixScale(10.3f, 80f);
 		setModelMatrixTranslation((Gdx.graphics.getWidth()/2), 20);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
-		Gdx.gl.glUniform4f(colorLoc, 0.3f, 0.3f, 0.3f, 1);
+		Gdx.gl.glUniform4f(colorLoc, 0.2f, 0.2f, 0.2f, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
 		
 		//player1
@@ -578,31 +698,102 @@ public class Pong extends ApplicationAdapter {
 		setModelMatrixScale(player1Size, 80f);
 		setModelMatrixTranslation((Gdx.graphics.getWidth()/2)-player1Dis, 20);
 		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
-		Gdx.gl.glUniform4f(colorLoc, 0.2f, 0.2f, 0.2f, 1);
+		Gdx.gl.glUniform4f(colorLoc, 0.1f, 0.1f, 0.1f, 1);
 		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
 		
 	}
-
+	
+	private void drawWinner() {
+		if(player1Score < player2Score) {
+			clearModelMatrix();
+			setModelMatrixScale(2f, 6f);
+			setModelMatrixTranslation(Gdx.graphics.getWidth()/2+300, Gdx.graphics.getHeight()/2);
+			Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+			Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
+			Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+			
+			clearModelMatrix();
+			setModelMatrixScale(2f, 6f);
+			setModelMatrixTranslation(Gdx.graphics.getWidth()/2-300, Gdx.graphics.getHeight()/2);
+			Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+			Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
+			Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+		} else if (player2Score < player1Score) {
+			clearModelMatrix();
+			setModelMatrixScale(2f, 6f);
+			setModelMatrixTranslation(Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
+			Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+			Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
+			Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+		} else {
+			clearModelMatrix();
+			setModelMatrixScale(6f, 2f);
+			setModelMatrixTranslation(Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
+			Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+			Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
+			Gdx.gl.glDrawArrays(GL20.GL_TRIANGLE_STRIP, 0, 4);
+		}
+		
+	}
+	
+	private void drawStaticBlock() {
+		clearModelMatrix();
+		setModelMatrixScale(1f, 1f);
+		setModelMatrixTranslation(Gdx.graphics.getWidth()/2+50, Gdx.graphics.getHeight()/2+50);
+		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLES, 0, 3);
+		clearModelMatrix();
+		setModelMatrixScale(-1f, 1f);
+		setModelMatrixTranslation(Gdx.graphics.getWidth()/2-50, Gdx.graphics.getHeight()/2+50);
+		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLES, 0, 3);
+		clearModelMatrix();
+		setModelMatrixScale(1f, -1f);
+		setModelMatrixTranslation(Gdx.graphics.getWidth()/2+50, Gdx.graphics.getHeight()/2-50);
+		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLES, 0, 3);
+		clearModelMatrix();
+		setModelMatrixScale(-1f, -1f);
+		setModelMatrixTranslation(Gdx.graphics.getWidth()/2-50, Gdx.graphics.getHeight()/2-50);
+		Gdx.gl.glVertexAttribPointer(positionLoc, 2, GL20.GL_FLOAT, false, 0, vertexBuffer);
+		Gdx.gl.glUniform4f(colorLoc, 0.8f, 0.3f, 0, 1);
+		Gdx.gl.glDrawArrays(GL20.GL_TRIANGLES, 0, 3);
+		
+	}
 	private void display()
 	{
 		//do all actual drawing and rendering here
 		drawBackround();
 		
-		for(int i = 0; i < Gdx.graphics.getHeight(); i+=Gdx.graphics.getHeight()/9) {
-			drawMiddle(Gdx.graphics.getWidth()/2, i);
-		}
-		
 		drawScore();
 		
-		drawBlocks(1);
-		
-		drawPaddle (paddle1PositionX, paddle1PositionY);
-		drawPaddle (paddle2PositionX, paddle2PositionY);
-		
-		drawBall(ballPositionX, ballPositionY);
+		boolean emptyArray = false;
+		for (int i = 0; i < blocksArray.length; i++) {
+			for (int j = 0; j < blocksArray[0].length; j++) {
+			  if (blocksArray[i][j] != 0) {
+				  emptyArray = false;
+			    break;
+			  }
+			}
+		}
+		if(!emptyArray) {
+			drawStaticBlock();
+			drawMiddle();
+			drawBlocks(1);
+			drawPaddle (paddle1PositionX, paddle1PositionY);
+			drawPaddle (paddle2PositionX, paddle2PositionY);
+			drawBall(ballPositionX, ballPositionY);
+		} else {
+			drawWinner();
+		}
 		
 		
 	}
+
+
 
 	@Override
 	public void render () {
