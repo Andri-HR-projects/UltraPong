@@ -2,7 +2,7 @@
 
 ## Programming assignment 2: 2D game in SC-T-511-TGRA - motion & collisions
 
-## Discription 
+## Description 
 
 In PDF file names Discription.pdf
 
